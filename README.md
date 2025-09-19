@@ -2,6 +2,8 @@
 
 A Python-based tool for searching, listing, and downloading manga chapters from Bato.to, featuring both a Command-Line Interface (CLI) and a Graphical User Interface (GUI).
 
+![GUI Screenshot](GUI.PNG)
+
 ## Table of Contents
 
 *   [Features](#features)
