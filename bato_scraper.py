@@ -1,18 +1,19 @@
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup  # type: ignore
 import os
 import re
 import json
 import time # Import time for sleep
 from concurrent.futures import ThreadPoolExecutor
 import threading
+from urllib.parse import quote
 
 def search_manga(query, max_pages=5):
     all_results = []
     seen_urls = set() # Use a set to store unique URLs
     page = 1
     while page <= max_pages:
-        search_url = f"https://bato.to/search?word={requests.utils.quote(query)}&page={page}"
+        search_url = f"https://bato.to/search?word={quote(query)}&page={page}"
         print(f"Searching page {page}: {search_url}")
         try:
             response = requests.get(search_url, timeout=10)
@@ -21,7 +22,7 @@ def search_manga(query, max_pages=5):
             print(f"Error fetching search page {page}: {e}")
             break
 
-        soup = BeautifulSoup(response.content, 'html.parser')
+        soup = BeautifulSoup(response.content.decode('utf-8'), 'html.parser')
 
         page_results_found = False # Flag to check if any new results were found on this page
         for item in soup.find_all('div', class_='item-text'):
@@ -44,9 +45,10 @@ def search_manga(query, max_pages=5):
 
 def get_manga_info(series_url):
     response = requests.get(series_url)
-    soup = BeautifulSoup(response.content, 'html.parser')
+    soup = BeautifulSoup(response.content.decode('utf-8'), 'html.parser')
 
-    manga_title = soup.find('h3', class_='item-title').text.strip()
+    manga_title_element = soup.find('h3', class_='item-title')
+    manga_title = manga_title_element.text.strip() if manga_title_element else "Unknown Title"
     chapters = []
     
     # Find all chapter links
@@ -65,7 +67,7 @@ def convert_chapter_to_pdf(chapter_dir, delete_images=False):
     from PIL import Image
 
     image_files = [os.path.join(chapter_dir, f) for f in os.listdir(chapter_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'))]
-    image_files.sort(key=lambda f: int(re.search(r'page_(\d+)', os.path.basename(f)).group(1)) if re.search(r'page_(\d+)', os.path.basename(f)) else 0)
+    image_files.sort(key=lambda f: int(match.group(1)) if (match := re.search(r'page_(\d+)', os.path.basename(f))) else 0)
 
     if not image_files:
         print(f"No images found in {chapter_dir} to convert to PDF.")
@@ -106,23 +108,31 @@ def convert_chapter_to_pdf(chapter_dir, delete_images=False):
         print(f"Error creating PDF for {chapter_dir}: {e}")
         return None
 
+def sanitize_filename(name: str) -> str:
+    """Sanitize filename to remove invalid Windows characters and normalize spaces."""
+    if not name:
+        return "untitled"
+
+    # Remove characters that are invalid in Windows file paths
+    name = re.sub(r'[<>:"/\\|?*]', '', name)
+    # Replace spaces with underscores and remove multiple underscores
+    name = re.sub(r'\s+', '_', name)
+    name = re.sub(r'_+', '_', name).strip('_')
+    # Remove trailing dots, which are invalid in Windows folder names
+    return name.rstrip('.')
+
 def download_chapter(chapter_url, manga_title, chapter_title, output_dir=".", stop_event=None, convert_to_pdf=False, keep_images=True):
     if stop_event and stop_event.is_set():
         return # Stop early if signal is already set
 
     response = requests.get(chapter_url)
-    soup = BeautifulSoup(response.content, 'html.parser')
+    soup = BeautifulSoup(response.content.decode('utf-8'), 'html.parser')
 
-    # Sanitize chapter_title for use in file paths
-    # Remove characters that are invalid in Windows file paths
-    sanitized_chapter_title = re.sub(r'[<>:"/\\|?*]', '', chapter_title).strip()
-    # Replace spaces with underscores and remove multiple underscores
-    sanitized_chapter_title = re.sub(r'\s+', '_', sanitized_chapter_title)
-    sanitized_chapter_title = re.sub(r'_+', '_', sanitized_chapter_title).strip('_')
-    # Remove trailing dots, which are invalid in Windows folder names
-    sanitized_chapter_title = sanitized_chapter_title.rstrip('.')
-    
-    chapter_dir = os.path.join(output_dir, manga_title, sanitized_chapter_title)
+    # Sanitize both manga_title and chapter_title for use in file paths
+    sanitized_manga_title = sanitize_filename(manga_title)
+    sanitized_chapter_title = sanitize_filename(chapter_title)
+
+    chapter_dir = os.path.join(output_dir, sanitized_manga_title, sanitized_chapter_title)
     os.makedirs(chapter_dir, exist_ok=True)
 
     image_urls = []
@@ -141,7 +151,7 @@ def download_chapter(chapter_url, manga_title, chapter_title, output_dir=".", st
         print(f"No image URLs found for {chapter_title} at {chapter_url}.")
         dump_file_path = os.path.join(chapter_dir, f"{sanitized_chapter_title}_dump.html")
         with open(dump_file_path, 'w', encoding='utf-8') as f:
-            f.write(soup.prettify())
+            f.write(str(soup.prettify()))
         print(f"Full HTML content dumped to {dump_file_path} for inspection.")
         return
 
