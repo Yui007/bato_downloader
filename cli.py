@@ -1,5 +1,6 @@
 import typer
 from typing_extensions import Annotated
+from typing import Optional
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Prompt
@@ -105,11 +106,13 @@ def list_chapters_func(chapters):
 def download(
     series_url: Annotated[str, typer.Argument(help="The Bato.to series URL.")],
     all_chapters: Annotated[bool, typer.Option("--all", "-a", help="Download all chapters.")] = False,
-    chapter_range: Annotated[str, typer.Option("--range", "-r", help="Download a specific range of chapters (e.g., '1-10').")] = None,
+    chapter_range: Annotated[Optional[str], typer.Option("--range", "-r", help="Download a specific range of chapters (e.g., '1-10').")] = None,
     output_dir: Annotated[str, typer.Option("--output", "-o", help="Directory to save downloaded chapters.")] = ".",
     max_workers: Annotated[int, typer.Option("--max-workers", "-w", help="Maximum number of concurrent chapter downloads.")] = 3,
+    image_workers: Annotated[int, typer.Option("--image-workers", "-iw", help="Maximum number of concurrent image downloads per chapter.")] = 15,
     convert_to_pdf: Annotated[bool, typer.Option("--pdf", help="Convert downloaded chapters to PDF.")] = False,
-    keep_images: Annotated[bool, typer.Option("--keep-images", help="Keep original image files after PDF conversion. Only applicable with --pdf.")] = False,
+    convert_to_cbz: Annotated[bool, typer.Option("--cbz", help="Convert downloaded chapters to CBZ (comic book archive).")] = False,
+    keep_images: Annotated[bool, typer.Option("--keep-images", help="Keep original image files after conversion. Only applicable with --pdf or --cbz.")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Enable verbose output.")] = False
 ):
     """
@@ -184,7 +187,7 @@ def download(
                 with print_lock:
                     progress.update(task, description=f"[bold green]Downloading {chapter['title']}...[/bold green] ([{index+1}/{len(chapters_to_download)}])")
             try:
-                download_chapter(chapter['url'], manga_title, chapter['title'], output_dir, stop_event, convert_to_pdf, keep_images)
+                download_chapter(chapter['url'], manga_title, chapter['title'], output_dir, stop_event, convert_to_pdf, convert_to_cbz, keep_images, image_workers)
                 if not stop_event.is_set() and verbose: # Only update progress if not stopped
                     with print_lock:
                         progress.advance(task)

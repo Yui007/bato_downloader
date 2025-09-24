@@ -7,6 +7,7 @@ import time # Import time for sleep
 from concurrent.futures import ThreadPoolExecutor
 import threading
 from urllib.parse import quote
+import zipfile
 
 def search_manga(query, max_pages=5):
     all_results = []
@@ -108,6 +109,43 @@ def convert_chapter_to_pdf(chapter_dir, delete_images=False):
         print(f"Error creating PDF for {chapter_dir}: {e}")
         return None
 
+def convert_chapter_to_cbz(chapter_dir, delete_images=False):
+    """Convert chapter images to CBZ (ZIP) comic book archive."""
+    image_files = [os.path.join(chapter_dir, f) for f in os.listdir(chapter_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'))]
+    image_files.sort(key=lambda f: int(match.group(1)) if (match := re.search(r'page_(\d+)', os.path.basename(f))) else 0)
+
+    if not image_files:
+        print(f"No images found in {chapter_dir} to convert to CBZ.")
+        return None
+
+    cbz_path = chapter_dir + ".cbz"
+
+    try:
+        with zipfile.ZipFile(cbz_path, 'w', zipfile.ZIP_DEFLATED) as cbz_file:
+            for img_file in image_files:
+                # Add files to ZIP with just the filename (not full path)
+                arcname = os.path.basename(img_file)
+                cbz_file.write(img_file, arcname)
+                print(f"Added {arcname} to CBZ archive")
+
+        print(f"Successfully created CBZ: {cbz_path}")
+
+        if delete_images:
+            for img_file in image_files:
+                try:
+                    os.remove(img_file)
+                except Exception as e:
+                    print(f"Error deleting image {img_file}: {e}")
+            try:
+                os.rmdir(chapter_dir) # Remove the directory if it's empty
+                print(f"Deleted image directory: {chapter_dir}")
+            except OSError as e:
+                print(f"Could not delete directory {chapter_dir}: {e}")
+        return cbz_path
+    except Exception as e:
+        print(f"Error creating CBZ for {chapter_dir}: {e}")
+        return None
+
 def sanitize_filename(name: str) -> str:
     """Sanitize filename to remove invalid Windows characters and normalize spaces."""
     if not name:
@@ -121,7 +159,7 @@ def sanitize_filename(name: str) -> str:
     # Remove trailing dots, which are invalid in Windows folder names
     return name.rstrip('.')
 
-def download_chapter(chapter_url, manga_title, chapter_title, output_dir=".", stop_event=None, convert_to_pdf=False, keep_images=True):
+def download_chapter(chapter_url, manga_title, chapter_title, output_dir=".", stop_event=None, convert_to_pdf=False, convert_to_cbz=False, keep_images=True, max_workers=15):
     if stop_event and stop_event.is_set():
         return # Stop early if signal is already set
 
@@ -176,11 +214,12 @@ def download_chapter(chapter_url, manga_title, chapter_title, output_dir=".", st
                     print(f"Error downloading {img_url}: {e}")
 
     # Use ThreadPoolExecutor for concurrent downloads
-    with ThreadPoolExecutor(max_workers=15) as executor: # You can adjust max_workers as needed
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [executor.submit(download_image, img_url, i) for i, img_url in enumerate(image_urls)]
         for future in futures:
             future.result() # Ensure all images are downloaded before proceeding
 
+    # Handle conversions
     if convert_to_pdf:
         print(f"Converting {chapter_title} to PDF...")
         pdf_file = convert_chapter_to_pdf(chapter_dir, delete_images=not keep_images)
@@ -188,3 +227,11 @@ def download_chapter(chapter_url, manga_title, chapter_title, output_dir=".", st
             print(f"PDF created: {pdf_file}")
         else:
             print(f"Failed to create PDF for {chapter_title}.")
+
+    if convert_to_cbz:
+        print(f"Converting {chapter_title} to CBZ...")
+        cbz_file = convert_chapter_to_cbz(chapter_dir, delete_images=not keep_images)
+        if cbz_file:
+            print(f"CBZ created: {cbz_file}")
+        else:
+            print(f"Failed to create CBZ for {chapter_title}.")

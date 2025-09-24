@@ -12,7 +12,7 @@ class BatoScraperGUI(ctk.CTk):
 
         self.title("Bato.to Manga Scraper")
         self.geometry("800x700")
-        self.resizable(False, False)
+        self.resizable(True, True)
 
         # Configure grid layout
         self.grid_columnconfigure(0, weight=1)
@@ -44,7 +44,7 @@ class BatoScraperGUI(ctk.CTk):
         # --- Action Buttons Frame ---
         self.action_frame = ctk.CTkFrame(self)
         self.action_frame.grid(row=1, column=0, padx=20, pady=(0, 20), sticky="nsew")
-        self.action_frame.grid_columnconfigure((0, 1, 2, 3), weight=1)
+        self.action_frame.grid_columnconfigure((0, 1, 2, 3, 4), weight=1)
 
         self.list_chapters_button = ctk.CTkButton(self.action_frame, text="List Chapters", command=self.list_chapters_thread)
         self.list_chapters_button.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
@@ -65,15 +65,19 @@ class BatoScraperGUI(ctk.CTk):
         self.convert_pdf_checkbox.grid(row=1, column=1, padx=10, pady=10, sticky="ew")
         self.convert_pdf_checkbox.bind("<Button-1>", self.toggle_keep_images_checkbox)
 
-        self.keep_images_checkbox = ctk.CTkCheckBox(self.action_frame, text="Keep Images (with PDF)")
-        self.keep_images_checkbox.grid(row=1, column=2, padx=10, pady=10, sticky="ew")
+        self.convert_cbz_checkbox = ctk.CTkCheckBox(self.action_frame, text="Convert to CBZ")
+        self.convert_cbz_checkbox.grid(row=1, column=2, padx=10, pady=10, sticky="ew")
+        self.convert_cbz_checkbox.bind("<Button-1>", self.toggle_keep_images_checkbox)
+
+        self.keep_images_checkbox = ctk.CTkCheckBox(self.action_frame, text="Keep Images (with PDF/CBZ)")
+        self.keep_images_checkbox.grid(row=1, column=3, padx=10, pady=10, sticky="ew")
         self.keep_images_checkbox.configure(state="disabled") # Initially disabled
 
         self.settings_button = ctk.CTkButton(self.action_frame, text="Settings", command=self.open_settings)
-        self.settings_button.grid(row=1, column=3, padx=10, pady=10, sticky="ew")
+        self.settings_button.grid(row=1, column=4, padx=10, pady=10, sticky="ew")
 
         self.output_dir_label = ctk.CTkLabel(self.action_frame, text=f"Output: {os.getcwd()}")
-        self.output_dir_label.grid(row=2, column=0, columnspan=4, padx=10, pady=5, sticky="w")
+        self.output_dir_label.grid(row=2, column=0, columnspan=5, padx=10, pady=5, sticky="w")
         self.output_directory = os.getcwd() # Default output directory
 
         # --- Progress Bar ---
@@ -91,14 +95,15 @@ class BatoScraperGUI(ctk.CTk):
         self.chapters = []
         self.download_executor = None # To hold the ThreadPoolExecutor
         self.stop_downloads_flag = threading.Event() # Event to signal stopping downloads
+        self.max_image_workers = 15 # Default value for concurrent image downloads
 
     def toggle_keep_images_checkbox(self, event):
-        # This function is called when the convert_pdf_checkbox is clicked
-        if self.convert_pdf_checkbox.get() == 1: # If PDF conversion is enabled
+        # This function is called when the convert_pdf_checkbox or convert_cbz_checkbox is clicked
+        if self.convert_pdf_checkbox.get() == 1 or self.convert_cbz_checkbox.get() == 1: # If any conversion is enabled
             self.keep_images_checkbox.configure(state="normal")
         else:
             self.keep_images_checkbox.configure(state="disabled")
-            self.keep_images_checkbox.deselect() # Uncheck if PDF conversion is disabled
+            self.keep_images_checkbox.deselect() # Uncheck if no conversion is enabled
 
     def log_message(self, message):
         self.output_text.configure(state="normal")
@@ -247,8 +252,9 @@ class BatoScraperGUI(ctk.CTk):
                 self.log_message(f"Downloading {chapter['title']}...")
             try:
                 convert_to_pdf = self.convert_pdf_checkbox.get() == 1
+                convert_to_cbz = self.convert_cbz_checkbox.get() == 1
                 keep_images = self.keep_images_checkbox.get() == 1
-                download_chapter(chapter['url'], self.manga_title, chapter['title'], self.output_directory, self.stop_downloads_flag, convert_to_pdf, keep_images)
+                download_chapter(chapter['url'], self.manga_title, chapter['title'], self.output_directory, self.stop_downloads_flag, convert_to_pdf, convert_to_cbz, keep_images, self.max_image_workers)
                 if not self.stop_downloads_flag.is_set(): # Only update progress if not stopped
                     with gui_update_lock:
                         self.update_progress(index + 1, total_chapters)
@@ -308,12 +314,12 @@ class BatoScraperGUI(ctk.CTk):
     def open_settings(self):
         settings_window = ctk.CTkToplevel(self)
         settings_window.title("Settings")
-        settings_window.geometry("400x200")
+        settings_window.geometry("500x300")
         settings_window.transient(self) # Make it appear on top of the main window
         settings_window.grab_set() # Make it modal
 
-        # Max Concurrent Downloads Setting
-        ctk.CTkLabel(settings_window, text="Max Concurrent Downloads:").pack(pady=10)
+        # Max Concurrent Chapter Downloads Setting
+        ctk.CTkLabel(settings_window, text="Max Concurrent Chapter Downloads:").pack(pady=10)
         self.max_downloads_slider = ctk.CTkSlider(settings_window, from_=1, to=10, number_of_steps=9)
         self.max_downloads_slider.set(self.max_concurrent_downloads) # Set current value
         self.max_downloads_slider.pack(pady=5)
@@ -321,6 +327,16 @@ class BatoScraperGUI(ctk.CTk):
         self.max_downloads_label.pack(pady=5)
         self.max_downloads_slider.bind("<B1-Motion>", self._update_max_downloads_label)
         self.max_downloads_slider.bind("<ButtonRelease-1>", self._update_max_downloads_setting)
+
+        # Max Concurrent Image Downloads Setting
+        ctk.CTkLabel(settings_window, text="Max Concurrent Image Downloads:").pack(pady=10)
+        self.max_image_downloads_slider = ctk.CTkSlider(settings_window, from_=5, to=30, number_of_steps=25)
+        self.max_image_downloads_slider.set(self.max_image_workers) # Set current value
+        self.max_image_downloads_slider.pack(pady=5)
+        self.max_image_downloads_label = ctk.CTkLabel(settings_window, text=f"Value: {int(self.max_image_downloads_slider.get())}")
+        self.max_image_downloads_label.pack(pady=5)
+        self.max_image_downloads_slider.bind("<B1-Motion>", self._update_max_image_downloads_label)
+        self.max_image_downloads_slider.bind("<ButtonRelease-1>", self._update_max_image_downloads_setting)
 
         # Close button
         ctk.CTkButton(settings_window, text="Close", command=settings_window.destroy).pack(pady=20)
@@ -334,11 +350,21 @@ class BatoScraperGUI(ctk.CTk):
             self.max_concurrent_downloads = new_value
             self.log_message(f"Max concurrent downloads set to: {self.max_concurrent_downloads}")
 
+    def _update_max_image_downloads_label(self, event):
+        self.max_image_downloads_label.configure(text=f"Value: {int(self.max_image_downloads_slider.get())}")
+
+    def _update_max_image_downloads_setting(self, event):
+        new_value = int(self.max_image_downloads_slider.get())
+        if new_value != self.max_image_workers:
+            self.max_image_workers = new_value
+            self.log_message(f"Max concurrent image downloads set to: {self.max_image_workers}")
+
 def main_gui():
     ctk.set_appearance_mode("System")  # Modes: "System" (default), "Dark", "Light"
     ctk.set_default_color_theme("blue")  # Themes: "blue" (default), "green", "dark-blue"
     app = BatoScraperGUI()
-    app.max_concurrent_downloads = 3 # Default value for concurrent downloads
+    app.max_concurrent_downloads = 3 # Default value for concurrent chapter downloads
+    app.max_image_workers = 15 # Default value for concurrent image downloads
     app.mainloop()
 
 if __name__ == "__main__":

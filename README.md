@@ -23,7 +23,10 @@ A Python-based tool for searching, listing, and downloading manga chapters from 
 *   **Chapter Listing:** List all available chapters for a given manga series.
 *   **Chapter Download:** Download single chapters, a range of chapters, or all chapters from a series.
 *   **PDF Conversion:** Convert downloaded chapters into a single PDF file.
+*   **CBZ Conversion:** Convert downloaded chapters into CBZ (comic book archive) files for digital comic readers.
 *   **Flexible Output:** Specify a custom directory for downloaded manga.
+*   **Concurrent Downloads:** Configurable threading for both chapter downloads and image downloads within chapters.
+*   **Windows Compatibility:** Automatic sanitization of folder names to prevent invalid characters on Windows systems.
 *   **User-Friendly Interfaces:** Choose between a powerful CLI built with `Typer` and `Rich`, or an intuitive GUI built with `CustomTkinter`.
 *   **Robust Scraping:** Handles image extraction and sanitization for file paths.
 
@@ -88,9 +91,23 @@ To run the CLI, navigate to the project directory and use `python cli.py [comman
         ```bash
         python cli.py download "https://bato.to/series/143275/no-guard-wife" --all --pdf -o "MangaDownloads"
         ```
-    *   **Keep Images with PDF:** Use the `--keep-images` flag along with `--pdf` to retain the original image files after PDF conversion.
+    *   **Convert to CBZ:** Use the `--cbz` flag to convert downloaded chapters into CBZ (comic book archive) files.
+        ```bash
+        python cli.py download "https://bato.to/series/143275/no-guard-wife" --all --cbz -o "MangaDownloads"
+        ```
+    *   **Convert to both PDF and CBZ:** Use both flags to create both formats.
+        ```bash
+        python cli.py download "https://bato.to/series/143275/no-guard-wife" --all --pdf --cbz -o "MangaDownloads"
+        ```
+    *   **Keep Images:** Use the `--keep-images` flag along with `--pdf` or `--cbz` to retain the original image files after conversion.
         ```bash
         python cli.py download "https://bato.to/series/143275/no-guard-wife" --all --pdf --keep-images -o "MangaDownloads"
+        ```
+    *   **Concurrent Downloads:** Control download performance with threading options.
+        *   `--max-workers` or `-w`: Maximum concurrent chapter downloads (default: 3)
+        *   `--image-workers` or `-iw`: Maximum concurrent image downloads per chapter (default: 15)
+        ```bash
+        python cli.py download "https://bato.to/series/143275/no-guard-wife" --all --pdf --max-workers 5 --image-workers 20
         ```
     *   **Specify output directory:** Use the `--output` or `-o` option to set the download directory. If not specified, chapters will be downloaded to the current working directory.
 
@@ -121,8 +138,10 @@ python cli.py gui
 *   **Download All Button:** Downloads all chapters of the currently loaded manga.
 *   **Download Range Button:** Prompts for a chapter range (e.g., `1-10`) and downloads those chapters.
 *   **Convert to PDF Checkbox:** Enable this to convert downloaded chapters into PDF files.
-*   **Keep Images Checkbox:** Enable this (along with "Convert to PDF") to keep original image files after PDF conversion.
+*   **Convert to CBZ Checkbox:** Enable this to convert downloaded chapters into CBZ (comic book archive) files.
+*   **Keep Images Checkbox:** Enable this (along with "Convert to PDF" or "Convert to CBZ") to keep original image files after conversion.
 *   **Select Output Dir Button:** Allows you to choose a directory where downloaded manga will be saved.
+*   **Settings Button:** Configure download performance with separate controls for chapter and image concurrency.
 *   **Progress Bar:** Shows the download progress.
 *   **Output Log:** Displays messages, search results, and download status.
 
@@ -145,10 +164,12 @@ python cli.py gui
     *   Contains the core logic for scraping Bato.to.
     *   `search_manga(query, max_pages)`: Searches for manga based on a query across multiple pages.
     *   `get_manga_info(series_url)`: Extracts the manga title and a list of chapters (title and URL) from a series page.
-    *   `download_chapter(chapter_url, manga_title, chapter_title, output_dir, stop_event, convert_to_pdf, keep_images)`: Downloads all images for a given chapter, sanitizes chapter titles for file paths, creates necessary directories, and saves images. Now also handles optional PDF conversion and image deletion.
+    *   `download_chapter(chapter_url, manga_title, chapter_title, output_dir, stop_event, convert_to_pdf, convert_to_cbz, keep_images, max_workers)`: Downloads all images for a given chapter with configurable threading, sanitizes titles for file paths, creates necessary directories, and saves images. Handles optional PDF and CBZ conversion.
     *   `convert_chapter_to_pdf(chapter_dir, delete_images)`: Converts a directory of images into a single PDF file.
-    *   Uses `requests` for HTTP requests and `BeautifulSoup` for parsing HTML.
-    *   Includes basic error handling for network requests and JSON parsing.
+    *   `convert_chapter_to_cbz(chapter_dir, delete_images)`: Converts a directory of images into a CBZ (comic book archive) file.
+    *   `sanitize_filename(name)`: Sanitizes filenames to remove invalid Windows characters and normalize spaces.
+    *   Uses `requests` for HTTP requests, `BeautifulSoup` for parsing HTML, and `ThreadPoolExecutor` for concurrent downloads.
+    *   Includes comprehensive error handling for network requests, JSON parsing, and file operations.
 
 ## Dependencies
 
@@ -160,15 +181,21 @@ The project relies on the following Python libraries:
 *   `requests`: For making HTTP requests to Bato.to.
 *   `beautifulsoup4`: For parsing HTML content and extracting data.
 *   `Pillow`: For image processing and PDF creation.
+*   `urllib.parse` (built-in): For URL encoding in search queries.
+
+**Note:** CBZ conversion uses Python's built-in `zipfile` module, so no additional dependencies are required.
 
 ## Error Handling
 
-Both the CLI and GUI include basic error handling for network issues and invalid inputs. If an error occurs during fetching information or downloading, an appropriate message will be displayed in the console (CLI) or the output log/message box (GUI).
+Both the CLI and GUI include comprehensive error handling for network issues, invalid inputs, and file system operations. If an error occurs during fetching information or downloading, an appropriate message will be displayed in the console (CLI) or the output log/message box (GUI).
 
 Common issues and tips:
 *   **Invalid URL:** Ensure the Bato.to series URL is correct and accessible.
 *   **Internet Connection:** Verify your internet connection if fetching or downloading fails.
-*   **Rate Limiting:** Excessive requests might lead to temporary blocks. The `bato_scraper.py` includes a `time.sleep(1)` between search pages to mitigate this.
+*   **Rate Limiting:** Excessive requests might lead to temporary blocks. The scraper includes delays between requests to mitigate this.
+*   **Windows Compatibility:** Folder names are automatically sanitized to remove invalid characters like `:`, `<`, `>`, etc.
+*   **Threading Issues:** If downloads fail intermittently, try reducing the concurrent download settings in the GUI or CLI options.
+*   **Disk Space:** Ensure sufficient disk space for downloads, especially when keeping images after conversion.
 *   **Website Changes:** Bato.to's website structure might change, which could break the scraping logic. If the tool stops working, the scraping logic in `bato_scraper.py` might need updates.
 
 ## License
