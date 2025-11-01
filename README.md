@@ -52,6 +52,39 @@ A Python-based tool for searching, listing, and downloading manga chapters from 
     pip install -r requirements.txt
     ```
 
+## Download Executables (No Installation Required)
+
+For users who prefer not to install Python dependencies, you can download pre-built executables:
+
+**For Windows:**
+- `bato-downloader-cli.exe` - Command-line interface executable
+- `bato-downloader-gui.exe` - Graphical user interface executable
+
+**For Linux/Mac:**
+- `bato-downloader-cli` - Command-line interface executable
+- `bato-downloader-gui` - Graphical user interface executable
+
+Simply download the executable for your platform and run it directly without any installation!
+
+## Building Executables from Source
+
+If you want to build your own executables:
+
+1. **Install dependencies including PyInstaller:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+2. **Build CLI executable:**
+    - Windows: Run `build_cli.bat`
+    - Linux/Mac: Run `build_cli.sh`
+
+3. **Build GUI executable:**
+    - Windows: Run `build_gui.bat`
+    - Linux/Mac: Run `build_gui.sh`
+
+The executables will be created in the `dist` directory.
+
 ## Usage
 
 ### Command-Line Interface (CLI)
