@@ -10,6 +10,8 @@ from urllib.parse import quote
 import zipfile
 
 def search_manga(query, max_pages=5):
+    import html
+    
     all_results = []
     seen_urls = set() # Use a set to store unique URLs
     page = 1
@@ -30,6 +32,9 @@ def search_manga(query, max_pages=5):
             title_element = item.find('a', class_='item-title')
             if title_element:
                 title = title_element.text.strip()
+                # Handle Unicode characters and HTML entities
+                title = html.unescape(title)
+                title = re.sub(r'[^\x00-\x7F]+', '', title)  # Remove non-ASCII
                 url = "https://bato.to" + title_element['href']
                 if url not in seen_urls: # Check if URL is already seen
                     all_results.append({'title': title, 'url': url})
@@ -45,17 +50,31 @@ def search_manga(query, max_pages=5):
     return all_results
 
 def get_manga_info(series_url):
+    import html
+    
     response = requests.get(series_url)
     soup = BeautifulSoup(response.content.decode('utf-8'), 'html.parser')
 
     manga_title_element = soup.find('h3', class_='item-title')
     manga_title = manga_title_element.text.strip() if manga_title_element else "Unknown Title"
+    
+    # Properly decode HTML entities and handle Unicode for console display
+    manga_title = html.unescape(manga_title)
+    
+    # Remove or replace problematic Unicode characters for console display
+    # Keep only ASCII characters and common Unicode that displays well
+    manga_title = re.sub(r'[^\x00-\x7F]+', '', manga_title)
+    manga_title = manga_title.strip()
+    
     chapters = []
     
     # Find all chapter links
     chapter_elements = soup.find_all('a', class_='chapt')
     for chapter_element in chapter_elements:
         chapter_title = chapter_element.text.strip()
+        chapter_title = html.unescape(chapter_title)
+        # Remove non-ASCII characters from chapter titles too
+        chapter_title = re.sub(r'[^\x00-\x7F]+', '', chapter_title)
         chapter_url = "https://bato.to" + chapter_element['href']
         chapters.append({'title': chapter_title, 'url': chapter_url})
     
@@ -153,6 +172,8 @@ def sanitize_filename(name: str) -> str:
 
     # Remove characters that are invalid in Windows file paths
     name = re.sub(r'[<>:"/\\|?*]', '', name)
+    # Handle Unicode by removing emoji and special characters that might cause issues
+    name = re.sub(r'[^\w\s-]', '', name)
     # Replace spaces with underscores and remove multiple underscores
     name = re.sub(r'\s+', '_', name)
     name = re.sub(r'_+', '_', name).strip('_')

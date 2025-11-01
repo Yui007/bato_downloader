@@ -10,8 +10,24 @@ from rich import print as rprint
 from concurrent.futures import ThreadPoolExecutor
 import threading
 import time # Import time for sleep
+import sys
+import locale
 
 from bato_scraper import get_manga_info, download_chapter, search_manga
+
+# Set UTF-8 encoding for console output on Windows
+if sys.platform.startswith('win'):
+    try:
+        # Enable UTF-8 encoding for Windows console
+        if hasattr(sys.stdout, 'reconfigure'):
+            # type: ignore[attr-defined]
+            sys.stdout.reconfigure(encoding='utf-8')  # type: ignore
+        elif hasattr(sys.stdout, 'encoding') and sys.stdout.encoding.lower() != 'utf-8':
+            import codecs
+            sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+            sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+    except:
+        pass  # Fallback to original behavior if encoding setup fails
 
 app = typer.Typer(help="Bato.to Manga Scraper CLI. Download manga chapters from Bato.to.")
 console = Console()
