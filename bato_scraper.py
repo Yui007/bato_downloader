@@ -36,8 +36,40 @@ def search_manga(query, max_pages=5):
                 title = html.unescape(title)
                 title = re.sub(r'[^\x00-\x7F]+', '', title)  # Remove non-ASCII
                 url = "https://bato.to" + title_element['href']
+                
+                # Extract latest chapter info and language
+                latest_chapter = None
+                release_date = None
+                language = None
+                
+                # Find the parent container that has both item-text and item-volch
+                parent = item.parent
+                if parent:
+                    volch_div = parent.find('div', class_='item-volch')
+                    if volch_div:
+                        # Get chapter link
+                        chapter_link = volch_div.find('a', class_='visited')
+                        if chapter_link:
+                            latest_chapter = chapter_link.text.strip()
+                        
+                        # Get release date
+                        date_element = volch_div.find('i')
+                        if date_element:
+                            release_date = date_element.text.strip()
+                    
+                    # Extract language from flag element
+                    flag_element = parent.find('em', class_='item-flag')
+                    if flag_element and flag_element.get('data-lang'):
+                        language = flag_element.get('data-lang')
+                
                 if url not in seen_urls: # Check if URL is already seen
-                    all_results.append({'title': title, 'url': url})
+                    all_results.append({
+                        'title': title, 
+                        'url': url,
+                        'latest_chapter': latest_chapter,
+                        'release_date': release_date,
+                        'language': language
+                    })
                     seen_urls.add(url)
                     page_results_found = True
         

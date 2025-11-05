@@ -6,6 +6,31 @@ from bato_scraper import get_manga_info, download_chapter, search_manga
 import os
 import re
 
+# Language code to full name mapping
+LANGUAGE_NAMES = {
+    'en': 'English',
+    'id': 'Indonesian',
+    'es': 'Spanish',
+    'fr': 'French',
+    'de': 'German',
+    'it': 'Italian',
+    'pt': 'Portuguese',
+    'ru': 'Russian',
+    'ja': 'Japanese',
+    'ko': 'Korean',
+    'zh': 'Chinese',
+    'ar': 'Arabic',
+    'tr': 'Turkish',
+    'pl': 'Polish',
+    'vi': 'Vietnamese',
+    'th': 'Thai',
+    'nl': 'Dutch',
+    'sv': 'Swedish',
+    'no': 'Norwegian',
+    'da': 'Danish',
+    'fi': 'Finnish',
+}
+
 class BatoScraperGUI(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -177,13 +202,34 @@ class BatoScraperGUI(ctk.CTk):
         try:
             results = search_manga(query)
             if results:
-                self.log_message(f"\n--- Search Results for '{query}' ---")
+                self.log_message(f"\n--- Search Results for '{query}' ---\n")
+                
                 for i, manga in enumerate(results):
-                    self.log_message(f"{i+1}. {manga['title']} ({manga['url']})")
+                    self.log_message(f"[{i+1}] {manga['title']}")
+                    
+                    # Add language on separate line
+                    if manga.get('language'):
+                        lang_name = LANGUAGE_NAMES.get(manga['language'], manga['language'].capitalize())
+                        self.log_message(f"    🌐 Language: {lang_name}")
+                    else:
+                        self.log_message(f"    🌐 Language: English (probably)")
+                    
+                    self.log_message(f"    🔗 {manga['url']}")
+                    
+                    # Display latest chapter and release date if available
+                    if manga.get('latest_chapter') or manga.get('release_date'):
+                        chapter_info = []
+                        if manga.get('latest_chapter'):
+                            chapter_info.append(f"Latest: {manga['latest_chapter']}")
+                        if manga.get('release_date'):
+                            chapter_info.append(f"Released: {manga['release_date']}")
+                        self.log_message(f"    📖 {' • '.join(chapter_info)}")
+                    
+                    self.log_message("")
                 
                 # Store results and show selection input
                 self.search_results = results
-                self.log_message("\nEnter the number of the series you want to select, or 0 to cancel:")
+                self.log_message("Enter the number of the series you want to select, or 0 to cancel:")
                 self.selection_frame.grid() # Show the selection input frame
                 self.selection_entry.delete(0, ctk.END)
                 self.selection_entry.focus_set()
