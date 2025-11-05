@@ -87,15 +87,31 @@ class BatoScraperGUI(ctk.CTk):
 
         # --- Output Text Area ---
         self.output_text = ctk.CTkTextbox(self, wrap="word")
-        self.output_text.grid(row=3, column=0, padx=20, pady=(0, 20), sticky="nsew")
+        self.output_text.grid(row=3, column=0, padx=20, pady=(0, 10), sticky="nsew")
         self.output_text.insert("end", "Welcome to Bato.to Manga Scraper GUI!\n")
         self.output_text.configure(state="disabled") # Make it read-only
+
+        # --- Selection Input Frame (hidden by default) ---
+        self.selection_frame = ctk.CTkFrame(self)
+        self.selection_frame.grid(row=4, column=0, padx=20, pady=(0, 20), sticky="ew")
+        self.selection_frame.grid_columnconfigure(1, weight=1)
+        self.selection_frame.grid_remove() # Hide initially
+
+        self.selection_label = ctk.CTkLabel(self.selection_frame, text="Enter selection number:")
+        self.selection_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        
+        self.selection_entry = ctk.CTkEntry(self.selection_frame, placeholder_text="Enter number or 0 to cancel")
+        self.selection_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+        
+        self.selection_button = ctk.CTkButton(self.selection_frame, text="Select", command=self.process_selection)
+        self.selection_button.grid(row=0, column=2, padx=10, pady=10, sticky="e")
 
         self.manga_title = None
         self.chapters = []
         self.download_executor = None # To hold the ThreadPoolExecutor
         self.stop_downloads_flag = threading.Event() # Event to signal stopping downloads
         self.max_image_workers = 15 # Default value for concurrent image downloads
+        self.search_results = None # Store search results for selection
 
     def toggle_keep_images_checkbox(self, event):
         # This function is called when the convert_pdf_checkbox or convert_cbz_checkbox is clicked
@@ -165,11 +181,12 @@ class BatoScraperGUI(ctk.CTk):
                 for i, manga in enumerate(results):
                     self.log_message(f"{i+1}. {manga['title']} ({manga['url']})")
                 
-                # Allow user to select a series from search results
+                # Store results and show selection input
+                self.search_results = results
                 self.log_message("\nEnter the number of the series you want to select, or 0 to cancel:")
-                self.output_text.configure(state="normal") # Temporarily enable for input
-                self.output_text.bind("<Return>", lambda event: self._process_search_selection(event, results))
-                self.output_text.focus_set()
+                self.selection_frame.grid() # Show the selection input frame
+                self.selection_entry.delete(0, ctk.END)
+                self.selection_entry.focus_set()
             else:
                 self.log_message(f"No results found for '{query}'.")
         except Exception as e:
@@ -177,26 +194,31 @@ class BatoScraperGUI(ctk.CTk):
         finally:
             self.progress_bar.set(1)
 
-    def _process_search_selection(self, event, results):
+    def process_selection(self):
+        if not self.search_results:
+            return
+        
         try:
-            selection_text = self.output_text.get("end-2c linestart", "end-1c").strip() # Get last line of input
+            selection_text = self.selection_entry.get().strip()
             selection = int(selection_text)
-            if 1 <= selection <= len(results):
-                selected_manga = results[selection - 1]
+            
+            if 1 <= selection <= len(self.search_results):
+                selected_manga = self.search_results[selection - 1]
                 self.url_entry.delete(0, ctk.END)
                 self.url_entry.insert(0, selected_manga['url'])
                 self.log_message(f"Selected: {selected_manga['title']}. URL set in Series URL field.")
                 self.log_message("Fetching info for selected manga...")
+                self.selection_frame.grid_remove() # Hide the selection frame
+                self.search_results = None
                 self.get_info_thread() # Automatically get info for the selected manga
             elif selection == 0:
                 self.log_message("Search selection cancelled.")
+                self.selection_frame.grid_remove()
+                self.search_results = None
             else:
                 self.log_message("Invalid selection. Please enter a valid number.")
         except ValueError:
             self.log_message("Invalid input. Please enter a number.")
-        finally:
-            self.output_text.unbind("<Return>")
-            self.output_text.configure(state="disabled")
 
     def download_all_thread(self):
         if not self.chapters:
