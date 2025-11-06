@@ -2,9 +2,15 @@ import customtkinter as ctk
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from tkinter import messagebox, filedialog
-from .bato_scraper import get_manga_info, download_chapter, search_manga
 import os
 import re
+
+try:
+    # When running as part of the package (PyPI)
+    from .bato_scraper import get_manga_info, download_chapter, search_manga
+except ImportError:
+    # When frozen to EXE or run directly
+    from bato_scraper import get_manga_info, download_chapter, search_manga
 
 # Language code to full name mapping
 LANGUAGE_NAMES = {

@@ -13,7 +13,12 @@ import time # Import time for sleep
 import sys
 import locale
 
-from .bato_scraper import get_manga_info, download_chapter, search_manga
+try:
+    # When running as part of the package (PyPI)
+    from .bato_scraper import get_manga_info, download_chapter, search_manga
+except ImportError:
+    # When frozen to EXE or run directly
+    from bato_scraper import get_manga_info, download_chapter, search_manga
 
 # Set UTF-8 encoding for console output on Windows
 if sys.platform.startswith('win'):
@@ -254,7 +259,10 @@ def launch_gui():
     rprint(Panel(Text("--- Bato.to Manga Scraper GUI ---", justify="center", style="bold purple"), style="purple"))
     rprint("[bold yellow]Launching GUI...[/bold yellow]")
     try:
-        from .gui import main_gui
+        try:
+            from .gui import main_gui
+        except ImportError:
+            from gui import main_gui
         main_gui()
     except ImportError:
         rprint("[bold red]GUI module not found. Please ensure 'gui.py' exists.[/bold red]")
