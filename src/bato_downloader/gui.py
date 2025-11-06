@@ -2,7 +2,7 @@ import customtkinter as ctk
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from tkinter import messagebox, filedialog
-from bato_scraper import get_manga_info, download_chapter, search_manga
+from .bato_scraper import get_manga_info, download_chapter, search_manga
 import os
 import re
 
@@ -124,10 +124,10 @@ class BatoScraperGUI(ctk.CTk):
 
         self.selection_label = ctk.CTkLabel(self.selection_frame, text="Enter selection number:")
         self.selection_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
-        
+
         self.selection_entry = ctk.CTkEntry(self.selection_frame, placeholder_text="Enter number or 0 to cancel")
         self.selection_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
-        
+
         self.selection_button = ctk.CTkButton(self.selection_frame, text="Select", command=self.process_selection)
         self.selection_button.grid(row=0, column=2, padx=10, pady=10, sticky="e")
 
@@ -203,19 +203,19 @@ class BatoScraperGUI(ctk.CTk):
             results = search_manga(query)
             if results:
                 self.log_message(f"\n--- Search Results for '{query}' ---\n")
-                
+
                 for i, manga in enumerate(results):
                     self.log_message(f"[{i+1}] {manga['title']}")
-                    
+
                     # Add language on separate line
                     if manga.get('language'):
                         lang_name = LANGUAGE_NAMES.get(manga['language'], manga['language'].capitalize())
                         self.log_message(f"    🌐 Language: {lang_name}")
                     else:
                         self.log_message(f"    🌐 Language: English (probably)")
-                    
+
                     self.log_message(f"    🔗 {manga['url']}")
-                    
+
                     # Display latest chapter and release date if available
                     if manga.get('latest_chapter') or manga.get('release_date'):
                         chapter_info = []
@@ -224,9 +224,9 @@ class BatoScraperGUI(ctk.CTk):
                         if manga.get('release_date'):
                             chapter_info.append(f"Released: {manga['release_date']}")
                         self.log_message(f"    📖 {' • '.join(chapter_info)}")
-                    
+
                     self.log_message("")
-                
+
                 # Store results and show selection input
                 self.search_results = results
                 self.log_message("Enter the number of the series you want to select, or 0 to cancel:")
@@ -243,11 +243,11 @@ class BatoScraperGUI(ctk.CTk):
     def process_selection(self):
         if not self.search_results:
             return
-        
+
         try:
             selection_text = self.selection_entry.get().strip()
             selection = int(selection_text)
-            
+
             if 1 <= selection <= len(self.search_results):
                 selected_manga = self.search_results[selection - 1]
                 self.url_entry.delete(0, ctk.END)

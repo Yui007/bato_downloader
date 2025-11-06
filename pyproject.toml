@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bato-downloader"
+version = "1.1.0"
+authors = [
+  { name="Yui007", email="akrtrt782@gmail.com" },
+]
+description = "A simple tool to download manga from Bato.to, with both a CLI and GUI."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "typer",
+    "rich",
+    "customtkinter",
+    "requests",
+    "beautifulsoup4",
+    "Pillow",
+]
+
+[project.urls]
+Homepage = "https://github.com/Yui007/bato_downloader"
+Issues = "https://github.com/Yui007/bato_downloader/issues"
+
+[project.scripts]
+bato-downloader = "bato_downloader.cli:app"
+bato-downloader-gui = "bato_downloader.gui:main_gui"

@@ -32,13 +32,37 @@ A Python-based tool for searching, listing, and downloading manga chapters from 
 
 ## Installation
 
+There are two primary methods to install Bato.to Downloader.
+
+### Method 1: Install from PyPI (Recommended)
+
+This is the easiest and fastest way to get started.
+
+1.  **Install the package using `pip`:**
+    ```bash
+    pip install bato-downloader
+    ```
+2.  **Run the application:**
+    *   To launch the GUI:
+        ```bash
+        bato-downloader-gui
+        ```
+    *   To use the CLI:
+        ```bash
+        bato-downloader --help
+        ```
+
+### Method 2: Install from Source (For Developers)
+
+Use this method if you want to modify the code or contribute to the project.
+
 1.  **Clone the repository:**
     ```bash
     git clone https://github.com/Yui007/bato_downloader.git
     cd bato_downloader
     ```
 
-2.  **Create a virtual environment (recommended):**
+2.  **Create and activate a virtual environment (recommended):**
     ```bash
     python -m venv venv
     # On Windows
@@ -47,10 +71,11 @@ A Python-based tool for searching, listing, and downloading manga chapters from 
     source venv/bin/activate
     ```
 
-3.  **Install dependencies:**
+3.  **Install the project in editable mode:**
     ```bash
-    pip install -r requirements.txt
+    pip install -e .
     ```
+    This command reads the dependencies from `pyproject.toml` and installs them, while also making the project runnable from your local source code.
 
 ## Download Executables (No Installation Required)
 
@@ -91,62 +116,62 @@ The executables will be created in the `dist` directory.
 
 The CLI is built with `Typer` and provides several commands.
 
-To run the CLI, navigate to the project directory and use `python cli.py [command] [options]`.
+To run the CLI from the source code, navigate to the project's root directory and use `python -m src.bato_downloader.cli [command] [options]`.
 
 *   **Get Manga Info:**
     ```bash
-    python cli.py info "https://bato.to/series/143275/no-guard-wife"
+    python -m src.bato_downloader.cli info "https://bato.to/series/143275/no-guard-wife"
     ```
     This command fetches and displays the manga title and the number of chapters. It will also prompt you if you want to list all chapters.
 
 *   **Search Manga:**
     ```bash
-    python cli.py search "Solo Leveling"
+    python -m src.bato_downloader.cli search "Solo Leveling"
     ```
     This command searches for manga series matching the query and lists their titles and URLs.
 
 *   **List Chapters:**
     ```bash
-    python cli.py list "https://bato.to/series/143275/no-guard-wife"
+    python -m src.bato_downloader.cli list "https://bato.to/series/143275/no-guard-wife"
     ```
     This command fetches and lists all chapters for the given series URL, including their titles and URLs.
 
 *   **Download Chapters:**
     *   **Download all chapters:**
         ```bash
-        python cli.py download "https://bato.to/series/143275/no-guard-wife" --all -o "MangaDownloads"
+        python -m src.bato_downloader.cli download "https://bato.to/series/143275/no-guard-wife" --all -o "MangaDownloads"
         ```
     *   **Download a specific range of chapters (e.g., chapters 1 to 10):**
         ```bash
-        python cli.py download "https://bato.to/series/143275/no-guard-wife" --range "1-10" -o "MangaDownloads"
+        python -m src.bato_downloader.cli download "https://bato.to/series/143275/no-guard-wife" --range "1-10" -o "MangaDownloads"
         ```
     *   **Convert to PDF:** Use the `--pdf` flag to convert downloaded chapters into a single PDF file. By default, original images are deleted after conversion.
         ```bash
-        python cli.py download "https://bato.to/series/143275/no-guard-wife" --all --pdf -o "MangaDownloads"
+        python -m src.bato_downloader.cli download "https://bato.to/series/143275/no-guard-wife" --all --pdf -o "MangaDownloads"
         ```
     *   **Convert to CBZ:** Use the `--cbz` flag to convert downloaded chapters into CBZ (comic book archive) files.
         ```bash
-        python cli.py download "https://bato.to/series/143275/no-guard-wife" --all --cbz -o "MangaDownloads"
+        python -m src.bato_downloader.cli download "https://bato.to/series/143275/no-guard-wife" --all --cbz -o "MangaDownloads"
         ```
     *   **Convert to both PDF and CBZ:** Use both flags to create both formats.
         ```bash
-        python cli.py download "https://bato.to/series/143275/no-guard-wife" --all --pdf --cbz -o "MangaDownloads"
+        python -m src.bato_downloader.cli download "https://bato.to/series/143275/no-guard-wife" --all --pdf --cbz -o "MangaDownloads"
         ```
     *   **Keep Images:** Use the `--keep-images` flag along with `--pdf` or `--cbz` to retain the original image files after conversion.
         ```bash
-        python cli.py download "https://bato.to/series/143275/no-guard-wife" --all --pdf --keep-images -o "MangaDownloads"
+        python -m src.bato_downloader.cli download "https://bato.to/series/143275/no-guard-wife" --all --pdf --keep-images -o "MangaDownloads"
         ```
     *   **Concurrent Downloads:** Control download performance with threading options.
         *   `--max-workers` or `-w`: Maximum concurrent chapter downloads (default: 3)
         *   `--image-workers` or `-iw`: Maximum concurrent image downloads per chapter (default: 15)
         ```bash
-        python cli.py download "https://bato.to/series/143275/no-guard-wife" --all --pdf --max-workers 5 --image-workers 20
+        python -m src.bato_downloader.cli download "https://bato.to/series/143275/no-guard-wife" --all --pdf --max-workers 5 --image-workers 20
         ```
     *   **Specify output directory:** Use the `--output` or `-o` option to set the download directory. If not specified, chapters will be downloaded to the current working directory.
 
 *   **Launch GUI:**
     ```bash
-    python cli.py gui
+    python -m src.bato_downloader.cli gui
     ```
     This command launches the graphical user interface.
 
@@ -154,11 +179,11 @@ To run the CLI, navigate to the project directory and use `python cli.py [comman
 
 The GUI provides a visual way to interact with the scraper.
 
-To launch the GUI, run:
+To launch the GUI from source, run:
 ```bash
-python gui.py
+python -m src.bato_downloader.gui
 # Or via the CLI:
-python cli.py gui
+python -m src.bato_downloader.cli gui
 ```
 
 **GUI Features:**
