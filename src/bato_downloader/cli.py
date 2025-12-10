@@ -214,7 +214,7 @@ def download(
                 with print_lock:
                     progress.update(task, description=f"[bold green]Downloading {chapter['title']}...[/bold green] ([{index+1}/{len(chapters_to_download)}])")
             try:
-                download_chapter(chapter['url'], manga_title, chapter['title'], output_dir, stop_event, convert_to_pdf, convert_to_cbz, keep_images, image_workers, metadata)
+                download_chapter(chapter['url'], manga_title, chapter['title'], output_dir or ".", stop_event, convert_to_pdf, convert_to_cbz, keep_images, image_workers, metadata)
                 if not stop_event.is_set() and verbose: # Only update progress if not stopped
                     with print_lock:
                         progress.advance(task)
