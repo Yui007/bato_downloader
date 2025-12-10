@@ -49,7 +49,7 @@ def get_info(
 
     with console.status("[bold yellow]Fetching manga information...[/bold yellow]", spinner="dots"):
         try:
-            manga_title, chapters = get_manga_info(series_url)
+            manga_title, chapters, metadata = get_manga_info(series_url)
         except Exception as e:
             rprint(f"[bold red]Error fetching manga info:[/bold red] {e}")
             rprint("[bold red]Please ensure the URL is correct and you have an internet connection.[/bold red]")
@@ -106,7 +106,7 @@ def list_chapters(
 
     with console.status("[bold yellow]Fetching manga information...[/bold yellow]", spinner="dots"):
         try:
-            _, chapters = get_manga_info(series_url)
+            _, chapters, _ = get_manga_info(series_url)
         except Exception as e:
             rprint(f"[bold red]Error fetching manga info:[/bold red] {e}")
             rprint("[bold red]Please ensure the URL is correct and you have an internet connection.[/bold red]")
@@ -144,7 +144,7 @@ def download(
 
     with console.status("[bold yellow]Fetching manga information...[/bold yellow]", spinner="dots"):
         try:
-            manga_title, chapters = get_manga_info(series_url)
+            manga_title, chapters, metadata = get_manga_info(series_url)
         except Exception as e:
             rprint(f"[bold red]Error fetching manga info:[/bold red] {e}")
             rprint("[bold red]Please ensure the URL is correct and you have an internet connection.[/bold red]")
@@ -208,7 +208,7 @@ def download(
                 with print_lock:
                     progress.update(task, description=f"[bold green]Downloading {chapter['title']}...[/bold green] ([{index+1}/{len(chapters_to_download)}])")
             try:
-                download_chapter(chapter['url'], manga_title, chapter['title'], output_dir, stop_event, convert_to_pdf, convert_to_cbz, keep_images, image_workers)
+                download_chapter(chapter['url'], manga_title, chapter['title'], output_dir, stop_event, convert_to_pdf, convert_to_cbz, keep_images, image_workers, metadata)
                 if not stop_event.is_set() and verbose: # Only update progress if not stopped
                     with print_lock:
                         progress.advance(task)

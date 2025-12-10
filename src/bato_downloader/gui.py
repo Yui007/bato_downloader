@@ -139,6 +139,7 @@ class BatoScraperGUI(ctk.CTk):
 
         self.manga_title = None
         self.chapters = []
+        self.metadata = None
         self.download_executor = None # To hold the ThreadPoolExecutor
         self.stop_downloads_flag = threading.Event() # Event to signal stopping downloads
         self.max_image_workers = 15 # Default value for concurrent image downloads
@@ -176,10 +177,15 @@ class BatoScraperGUI(ctk.CTk):
 
     def _get_info(self, series_url):
         try:
-            self.manga_title, self.chapters = get_manga_info(series_url)
+            self.manga_title, self.chapters, self.metadata = get_manga_info(series_url)
             if self.manga_title and self.chapters:
                 self.log_message(f"Manga Title: {self.manga_title}")
                 self.log_message(f"Found {len(self.chapters)} chapters.")
+                if self.metadata:
+                    if self.metadata.get('authors'):
+                         self.log_message(f"Authors: {', '.join(self.metadata['authors'])}")
+                    if self.metadata.get('status'):
+                         self.log_message(f"Status: {self.metadata['status']}")
             else:
                 self.log_message("Could not retrieve manga title or chapters. Check URL.")
         except Exception as e:
@@ -328,7 +334,7 @@ class BatoScraperGUI(ctk.CTk):
                 convert_to_pdf = self.convert_pdf_checkbox.get() == 1
                 convert_to_cbz = self.convert_cbz_checkbox.get() == 1
                 keep_images = self.keep_images_checkbox.get() == 1
-                download_chapter(chapter['url'], self.manga_title, chapter['title'], self.output_directory, self.stop_downloads_flag, convert_to_pdf, convert_to_cbz, keep_images, self.max_image_workers)
+                download_chapter(chapter['url'], self.manga_title, chapter['title'], self.output_directory, self.stop_downloads_flag, convert_to_pdf, convert_to_cbz, keep_images, self.max_image_workers, self.metadata)
                 if not self.stop_downloads_flag.is_set(): # Only update progress if not stopped
                     with gui_update_lock:
                         self.update_progress(index + 1, total_chapters)

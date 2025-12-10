@@ -99,7 +99,78 @@ def get_manga_info(series_url):
     # Keep only ASCII characters and common Unicode that displays well
     manga_title = re.sub(r'[^\x00-\x7F]+', '', manga_title)
     manga_title = manga_title.strip()
-    
+
+    # --- Extract Metadata ---
+    metadata = {
+        'authors': [],
+        'artists': [],
+        'genres': [],
+        'status': None,
+        'summary': None
+    }
+
+    try:
+        # Authors
+        authors_div = soup.find('div', class_='attr-item', string=lambda text: text and 'Authors:' in text)
+        if authors_div: # Sometimes the text is inside b tag
+             authors_span = authors_div.find('span')
+             if authors_span:
+                 metadata['authors'] = [a.text.strip() for a in authors_span.find_all('a')]
+        else: # Try finding b tag
+             authors_b = soup.find('b', class_='text-muted', string='Authors:')
+             if authors_b and authors_b.parent:
+                 authors_span = authors_b.parent.find('span')
+                 if authors_span:
+                     metadata['authors'] = [a.text.strip() for a in authors_span.find_all('a')]
+
+        # Artists
+        artists_div = soup.find('div', class_='attr-item', string=lambda text: text and 'Artists:' in text)
+        if artists_div:
+            artists_span = artists_div.find('span')
+            if artists_span:
+                metadata['artists'] = [a.text.strip() for a in artists_span.find_all('a')]
+        else:
+             artists_b = soup.find('b', class_='text-muted', string='Artists:')
+             if artists_b and artists_b.parent:
+                 artists_span = artists_b.parent.find('span')
+                 if artists_span:
+                     metadata['artists'] = [a.text.strip() for a in artists_span.find_all('a')]
+
+        # Genres
+        genres_div = soup.find('div', class_='attr-item', string=lambda text: text and 'Genres:' in text)
+        if genres_div:
+             genres_span = genres_div.find('span')
+             if genres_span:
+                 metadata['genres'] = [span.text.strip() for span in genres_span.find_all('span')]
+        else:
+             genres_b = soup.find('b', class_='text-muted', string='Genres:')
+             if genres_b and genres_b.parent:
+                 genres_span = genres_b.parent.find('span')
+                 if genres_span:
+                     # Genres can be in span, u, b tags
+                     metadata['genres'] = [el.text.strip() for el in genres_span.find_all(['span', 'u', 'b'])]
+
+        # Status (Upload status)
+        status_div = soup.find('div', class_='attr-item', string=lambda text: text and 'Upload status:' in text)
+        if status_div:
+            status_span = status_div.find('span')
+            if status_span:
+                metadata['status'] = status_span.text.strip()
+        else:
+             status_b = soup.find('b', class_='text-muted', string='Upload status:')
+             if status_b and status_b.parent:
+                 status_span = status_b.parent.find('span')
+                 if status_span:
+                     metadata['status'] = status_span.text.strip()
+
+        # Summary
+        summary_div = soup.find('div', class_='limit-html')
+        if summary_div:
+            metadata['summary'] = summary_div.text.strip()
+            
+    except Exception as e:
+        print(f"Warning: Error extracting metadata: {e}")
+
     chapters = []
     
     # Find all chapter links
@@ -115,7 +186,7 @@ def get_manga_info(series_url):
     # Reverse the order of chapters so that Chapter 1 is listed first
     chapters.reverse()
     
-    return manga_title, chapters
+    return manga_title, chapters, metadata
 
 def convert_chapter_to_pdf(chapter_dir, delete_images=False):
     from PIL import Image
@@ -162,7 +233,7 @@ def convert_chapter_to_pdf(chapter_dir, delete_images=False):
         print(f"Error creating PDF for {chapter_dir}: {e}")
         return None
 
-def _create_comic_info_xml(manga_title, chapter_title):
+def _create_comic_info_xml(manga_title, chapter_title, metadata=None):
     """Create ComicInfo.xml content as a string."""
     
     # Basic XML structure
@@ -181,7 +252,24 @@ def _create_comic_info_xml(manga_title, chapter_title):
     if match:
         number = ET.SubElement(root, "Number")
         number.text = match.group(1)
-
+    
+    if metadata:
+        if metadata.get('summary'):
+            summary = ET.SubElement(root, "Summary")
+            summary.text = metadata['summary']
+        
+        if metadata.get('authors'):
+            writer = ET.SubElement(root, "Writer")
+            writer.text = ', '.join(metadata['authors'])
+            
+        if metadata.get('artists'):
+            penciller = ET.SubElement(root, "Penciller")
+            penciller.text = ', '.join(metadata['artists'])
+            
+        if metadata.get('genres'):
+            genre = ET.SubElement(root, "Genre")
+            genre.text = ', '.join(metadata['genres'])
+            
     # Add a note
     notes = ET.SubElement(root, "Notes")
     notes.text = "Generated by Bato-Downloader"
@@ -192,7 +280,7 @@ def _create_comic_info_xml(manga_title, chapter_title):
     
     return pretty_xml_str
 
-def convert_chapter_to_cbz(chapter_dir, manga_title, chapter_title, delete_images=False):
+def convert_chapter_to_cbz(chapter_dir, manga_title, chapter_title, delete_images=False, metadata=None):
     """Convert chapter images to CBZ (ZIP) comic book archive."""
     image_files = [os.path.join(chapter_dir, f) for f in os.listdir(chapter_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'))]
     image_files.sort(key=lambda f: int(match.group(1)) if (match := re.search(r'page_(\d+)', os.path.basename(f))) else 0)
@@ -205,7 +293,7 @@ def convert_chapter_to_cbz(chapter_dir, manga_title, chapter_title, delete_image
 
     try:
         # Create ComicInfo.xml
-        comic_info_xml = _create_comic_info_xml(manga_title, chapter_title)
+        comic_info_xml = _create_comic_info_xml(manga_title, chapter_title, metadata)
 
         with zipfile.ZipFile(cbz_path, 'w', zipfile.ZIP_DEFLATED) as cbz_file:
             # Add ComicInfo.xml to the archive
@@ -251,7 +339,7 @@ def sanitize_filename(name: str) -> str:
     # Remove trailing dots, which are invalid in Windows folder names
     return name.rstrip('.')
 
-def download_chapter(chapter_url, manga_title, chapter_title, output_dir=".", stop_event=None, convert_to_pdf=False, convert_to_cbz=False, keep_images=True, max_workers=15):
+def download_chapter(chapter_url, manga_title, chapter_title, output_dir=".", stop_event=None, convert_to_pdf=False, convert_to_cbz=False, keep_images=True, max_workers=15, metadata=None):
     if stop_event and stop_event.is_set():
         return # Stop early if signal is already set
 
@@ -322,7 +410,7 @@ def download_chapter(chapter_url, manga_title, chapter_title, output_dir=".", st
 
     if convert_to_cbz:
         print(f"Converting {chapter_title} to CBZ...")
-        cbz_file = convert_chapter_to_cbz(chapter_dir, manga_title, chapter_title, delete_images=not keep_images)
+        cbz_file = convert_chapter_to_cbz(chapter_dir, manga_title, chapter_title, delete_images=not keep_images, metadata=metadata)
         if cbz_file:
             print(f"CBZ created: {cbz_file}")
         else:
