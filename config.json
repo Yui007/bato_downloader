@@ -1,0 +1,8 @@
+{
+    "output_directory": ".",
+    "max_concurrent_chapter_downloads": 5,
+    "max_concurrent_image_downloads": 10,
+    "window_size": "800x700+78+78",
+    "theme": "Dark",
+    "color_theme": "green"
+}

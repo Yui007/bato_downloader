@@ -16,9 +16,11 @@ import locale
 try:
     # When running as part of the package (PyPI)
     from .bato_scraper import get_manga_info, download_chapter, search_manga
+    from .config import load_config
 except ImportError:
     # When frozen to EXE or run directly
     from bato_scraper import get_manga_info, download_chapter, search_manga
+    from config import load_config
 
 # Set UTF-8 encoding for console output on Windows
 if sys.platform.startswith('win'):
@@ -128,7 +130,7 @@ def download(
     series_url: Annotated[str, typer.Argument(help="The Bato.to series URL.")],
     all_chapters: Annotated[bool, typer.Option("--all", "-a", help="Download all chapters.")] = False,
     chapter_range: Annotated[Optional[str], typer.Option("--range", "-r", help="Download a specific range of chapters (e.g., '1-10').")] = None,
-    output_dir: Annotated[str, typer.Option("--output", "-o", help="Directory to save downloaded chapters.")] = ".",
+    output_dir: Annotated[Optional[str], typer.Option("--output", "-o", help="Directory to save downloaded chapters.")] = None,
     max_workers: Annotated[int, typer.Option("--max-workers", "-w", help="Maximum number of concurrent chapter downloads.")] = 3,
     image_workers: Annotated[int, typer.Option("--image-workers", "-iw", help="Maximum number of concurrent image downloads per chapter.")] = 15,
     convert_to_pdf: Annotated[bool, typer.Option("--pdf", help="Convert downloaded chapters to PDF.")] = False,
@@ -139,6 +141,10 @@ def download(
     """
     Downloads chapters from a manga series.
     """
+    if output_dir is None:
+        config = load_config()
+        output_dir = config.get("output_directory", ".")
+
     rprint(Panel(Text("--- Bato.to Manga Scraper CLI ---", justify="center", style="bold green"), style="green"))
     rprint(f"\n[bold blue]Fetching manga info from:[/bold blue] [link={series_url}]{series_url}[/link]")
 
