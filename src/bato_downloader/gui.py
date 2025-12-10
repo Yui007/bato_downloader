@@ -182,7 +182,8 @@ class BatoScraperGUI(ctk.CTk):
             self.output_directory = directory
             self.output_dir_label.configure(text=f"Output: {self.output_directory}")
             self.log_message(f"Output directory set to: {self.output_directory}")
-            update_config_value("output_directory", self.output_directory)
+            self.config["output_directory"] = self.output_directory
+            save_config(self.config)
 
     def get_info_thread(self):
         series_url = self.url_entry.get().strip()
@@ -424,7 +425,7 @@ class BatoScraperGUI(ctk.CTk):
         self.max_downloads_label = ctk.CTkLabel(settings_window, text=f"Value: {int(self.max_downloads_slider.get())}")
         self.max_downloads_label.pack(pady=5)
         self.max_downloads_slider.bind("<B1-Motion>", self._update_max_downloads_label)
-        self.max_downloads_slider.bind("<ButtonRelease-1>", self._update_max_downloads_setting)
+        # self.max_downloads_slider.bind("<ButtonRelease-1>", self._update_max_downloads_setting) # Removed auto-save
 
         # Max Concurrent Image Downloads Setting
         ctk.CTkLabel(settings_window, text="Max Concurrent Image Downloads:").pack(pady=10)
@@ -434,49 +435,80 @@ class BatoScraperGUI(ctk.CTk):
         self.max_image_downloads_label = ctk.CTkLabel(settings_window, text=f"Value: {int(self.max_image_downloads_slider.get())}")
         self.max_image_downloads_label.pack(pady=5)
         self.max_image_downloads_slider.bind("<B1-Motion>", self._update_max_image_downloads_label)
-        self.max_image_downloads_slider.bind("<ButtonRelease-1>", self._update_max_image_downloads_setting)
+        # self.max_image_downloads_slider.bind("<ButtonRelease-1>", self._update_max_image_downloads_setting) # Removed auto-save
 
         # Appearance Mode
         ctk.CTkLabel(settings_window, text="Appearance Mode:").pack(pady=10)
-        self.appearance_mode_menu = ctk.CTkOptionMenu(settings_window, values=["System", "Light", "Dark"], command=self.change_appearance_mode_event)
+        self.appearance_mode_menu = ctk.CTkOptionMenu(settings_window, values=["System", "Light", "Dark"])
         self.appearance_mode_menu.set(get_config_value("theme", "System"))
         self.appearance_mode_menu.pack(pady=5)
 
         # Color Theme
         ctk.CTkLabel(settings_window, text="Color Theme (Requires Restart):").pack(pady=10)
-        self.color_theme_menu = ctk.CTkOptionMenu(settings_window, values=["blue", "green", "dark-blue"], command=self.change_color_theme_event)
+        self.color_theme_menu = ctk.CTkOptionMenu(settings_window, values=["blue", "green", "dark-blue"])
         self.color_theme_menu.set(get_config_value("color_theme", "blue"))
         self.color_theme_menu.pack(pady=5)
 
+        # Buttons Frame
+        self.settings_buttons_frame = ctk.CTkFrame(settings_window, fg_color="transparent")
+        self.settings_buttons_frame.pack(pady=20, fill="x")
+
+        # Save Button
+        self.save_settings_button = ctk.CTkButton(self.settings_buttons_frame, text="Save Settings", command=lambda: self.save_settings(settings_window))
+        self.save_settings_button.pack(side="left", expand=True, padx=10)
+
         # Close button
-        ctk.CTkButton(settings_window, text="Close", command=settings_window.destroy).pack(pady=20)
+        ctk.CTkButton(self.settings_buttons_frame, text="Close", command=settings_window.destroy, fg_color="transparent", border_width=1, text_color=("gray10", "#DCE4EE")).pack(side="right", expand=True, padx=10)
 
-    def change_appearance_mode_event(self, new_appearance_mode: str):
-        ctk.set_appearance_mode(new_appearance_mode)
-        update_config_value("theme", new_appearance_mode)
+    def save_settings(self, window):
+        # Update self.config with new values
+        
+        # 1. Update Sliders
+        new_max_downloads = int(self.max_downloads_slider.get())
+        if new_max_downloads != self.max_concurrent_downloads:
+            self.max_concurrent_downloads = new_max_downloads
+            self.config["max_concurrent_chapter_downloads"] = self.max_concurrent_downloads
+            self.log_message(f"Max concurrent downloads set to: {self.max_concurrent_downloads}")
 
-    def change_color_theme_event(self, new_color_theme: str):
-        update_config_value("color_theme", new_color_theme)
+        new_max_image = int(self.max_image_downloads_slider.get())
+        if new_max_image != self.max_image_workers:
+            self.max_image_workers = new_max_image
+            self.config["max_concurrent_image_downloads"] = self.max_image_workers
+            self.log_message(f"Max concurrent image downloads set to: {self.max_image_workers}")
+
+        # 2. Appearance Mode
+        new_appearance_mode = self.appearance_mode_menu.get()
+        if new_appearance_mode != self.config.get("theme", "System"):
+            try:
+                # Release grab before changing appearance to prevent freeze
+                window.grab_release()
+                ctk.set_appearance_mode(new_appearance_mode)
+                self.config["theme"] = new_appearance_mode
+                # Re-grab after a short delay if window is still open
+                window.after(100, window.grab_set)
+            except Exception as e:
+                self.log_message(f"Error setting appearance mode: {e}")
+
+        # 3. Color Theme
+        new_color_theme = self.color_theme_menu.get()
+        if new_color_theme != self.config.get("color_theme", "blue"):
+            self.config["color_theme"] = new_color_theme
+            messagebox.showinfo("Restart Required", "Color theme change will take effect after restarting the application.")
+
+        # Save the updated config to file
+        save_config(self.config)
+        window.destroy()
+
         
     def _update_max_downloads_label(self, event):
         self.max_downloads_label.configure(text=f"Value: {int(self.max_downloads_slider.get())}")
 
-    def _update_max_downloads_setting(self, event):
-        new_value = int(self.max_downloads_slider.get())
-        if new_value != self.max_concurrent_downloads:
-            self.max_concurrent_downloads = new_value
-            self.log_message(f"Max concurrent downloads set to: {self.max_concurrent_downloads}")
-            update_config_value("max_concurrent_chapter_downloads", self.max_concurrent_downloads)
+
 
     def _update_max_image_downloads_label(self, event):
         self.max_image_downloads_label.configure(text=f"Value: {int(self.max_image_downloads_slider.get())}")
 
-    def _update_max_image_downloads_setting(self, event):
-        new_value = int(self.max_image_downloads_slider.get())
-        if new_value != self.max_image_workers:
-            self.max_image_workers = new_value
-            self.log_message(f"Max concurrent image downloads set to: {self.max_image_workers}")
-            update_config_value("max_concurrent_image_downloads", self.max_image_workers)
+
 
 def main_gui():
     config = load_config()
