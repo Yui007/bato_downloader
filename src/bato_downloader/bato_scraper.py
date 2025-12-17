@@ -17,14 +17,37 @@ def search_manga(query, max_pages=5):
     all_results = []
     seen_urls = set() # Use a set to store unique URLs
     page = 1
+    
+    domains = ["https://bato.to", "https://batotoo.com"]
+    active_domain = None
+
     while page <= max_pages:
-        search_url = f"https://bato.to/search?word={quote(query)}&page={page}"
-        print(f"Searching page {page}: {search_url}")
-        try:
-            response = requests.get(search_url, timeout=10)
-            response.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching search page {page}: {e}")
+        response = None
+        current_domain = None
+        
+        # Determine which domain to use (or try options)
+        # If we already have an active_domain that works, try that first (or only that)
+        # However, if it fails, we might want to fallback? 
+        # For simplicity, if we found a working domain, we stick to it.
+        
+        search_domains = [active_domain] if active_domain else domains
+        
+        for domain in search_domains:
+            search_url = f"{domain}/search?word={quote(query)}&page={page}"
+            print(f"Searching page {page}: {search_url}")
+            try:
+                response = requests.get(search_url, timeout=10)
+                response.raise_for_status()
+                current_domain = domain
+                if not active_domain:
+                    active_domain = domain # Lock onto the first working domain
+                break
+            except requests.exceptions.RequestException as e:
+                print(f"Error fetching search page {page} from {domain}: {e}")
+                continue
+        
+        if not response or not current_domain:
+            print(f"Could not fetch search results for page {page}. Stopping.")
             break
 
         soup = BeautifulSoup(response.content.decode('utf-8'), 'html.parser')
@@ -37,7 +60,7 @@ def search_manga(query, max_pages=5):
                 # Handle Unicode characters and HTML entities
                 title = html.unescape(title)
                 title = re.sub(r'[^\x00-\x7F]+', '', title)  # Remove non-ASCII
-                url = "https://bato.to" + title_element['href']
+                url = current_domain + title_element['href']
 
                 # Extract latest chapter info and language
                 latest_chapter = None
@@ -85,6 +108,11 @@ def search_manga(query, max_pages=5):
 
 def get_manga_info(series_url):
     import html
+    from urllib.parse import urlparse
+    
+    # Determine base URL from the series URL
+    parsed_url = urlparse(series_url)
+    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
     
     response = requests.get(series_url)
     soup = BeautifulSoup(response.content.decode('utf-8'), 'html.parser')
@@ -180,7 +208,7 @@ def get_manga_info(series_url):
         chapter_title = html.unescape(chapter_title)
         # Remove non-ASCII characters from chapter titles too
         chapter_title = re.sub(r'[^\x00-\x7F]+', '', chapter_title)
-        chapter_url = "https://bato.to" + chapter_element['href']
+        chapter_url = base_url + chapter_element['href']
         chapters.append({'title': chapter_title, 'url': chapter_url})
     
     # Reverse the order of chapters so that Chapter 1 is listed first
