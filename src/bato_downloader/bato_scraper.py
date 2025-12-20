@@ -539,13 +539,27 @@ def download_chapter(chapter_url, manga_title, chapter_title, output_dir=".", st
     # Use a lock for thread-safe printing
     print_lock = threading.Lock()
 
+    # Test if this a valid link for Primary and Backup sites
+    def looks_like_broken_batoto_url(s):
+    return isinstance(s, str) and '//k' in s and '.mb' in s
+    
+    # Replace Primary site with Backup site
+    def replace_k_with_n(s):
+    if not isinstance(s, str):
+        return s
+    return s.replace('//k', '//n')
+    
     def download_image(img_url, index):
         if stop_event and stop_event.is_set():
             return # Stop early if signal is set
 
         if img_url and img_url.startswith('http'):
             try:
-                img_data = requests.get(img_url).content
+                img_response = requests.get(img_url)
+                if not img_repsonse.ok and looks_like_broken_batoto_url(img_url):
+                        fixed_img_url = replace_k_with_n(img_url)
+                        img_response = requests.get(fixed_img_url)
+                img_data = img_response.content
                 img_extension = img_url.split('.')[-1].split('?')[0]
                 img_path = os.path.join(chapter_dir, f"page_{index+1}.{img_extension}")
                 with open(img_path, 'wb') as handler:
