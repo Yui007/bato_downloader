@@ -117,6 +117,100 @@ def get_manga_info(series_url):
     response = requests.get(series_url)
     soup = BeautifulSoup(response.content.decode('utf-8'), 'html.parser')
 
+    # Logic for bato.si (different HTML structure)
+    if 'bato.si' in base_url:
+        try:
+            # Title
+            # Look for h3 with specific classes usually found in bato.si (Tailwind)
+            manga_title_element = soup.select_one('h3.text-lg.md\\:text-2xl.font-bold a')
+            manga_title = manga_title_element.text.strip() if manga_title_element else "Unknown Title"
+            manga_title = html.unescape(manga_title)
+            manga_title = re.sub(r'[^\x00-\x7F]+', '', manga_title).strip()
+
+            # --- Extract Metadata ---
+            metadata = {
+                'authors': [],
+                'artists': [],
+                'genres': [],
+                'status': None,
+                'summary': None
+            }
+            
+            # Authors/Artists (bato.si often groups them or links them similarly)
+            # Find div containing author links
+            # Selector approximation based on user snippet: div with mt-2 containing /author links
+            # User snippet: <div class="mt-2 text-sm md:text-base opacity-80" ...>
+            author_container = soup.select_one('div.mt-2.text-sm.md\\:text-base.opacity-80')
+            if author_container:
+                for link in author_container.find_all('a', href=True):
+                    if '/author' in link['href']:
+                        text = link.text.strip()
+                        # Simple heuristic to separate if marked? User ex: "G Yu(Art)"
+                        if '(Art)' in text or '(Artist)' in text:
+                            metadata['artists'].append(text)
+                        else:
+                            metadata['authors'].append(text)
+
+            # Genres
+            # Look for "Genres:" bold text
+            genres_b = soup.find('b', string=lambda t: t and 'Genres:' in t)
+            if genres_b and genres_b.parent:
+                # User snippet: <span q:key="manhwa"><span class="whitespace-nowrap font-bold">Manhwa</span>...</span>
+                # The genres seem to be in spans inside the parent div
+                # We want the text inside the spans that are not commas or "Genres:"
+                # A safe bet is to iterate children and extract text from spans that define genres
+                # The hierarchy is a bit complex in the snippet.
+                # Simplification: find all spans with class 'whitespace-nowrap' inside the parent container?
+                genre_container = genres_b.parent
+                # Find direct or nested spans that have text and aren't commas
+                potential_genres = genre_container.select('span.whitespace-nowrap')
+                metadata['genres'] = [g.text.strip() for g in potential_genres]
+
+            # Status
+            # Look for "Bato Upload Status:"
+            status_div = soup.find(lambda tag: tag.name == 'div' and ('Bato Status:' in tag.text or 'Bato Upload Status:' in tag.text))
+            if status_div:
+                status_span = status_div.select_one('span.font-bold')
+                if status_span:
+                    metadata['status'] = status_span.text.strip()
+
+            # Summary
+            # <div class="limit-html prose lg:prose-lg"><div class="limit-html-p">
+            summary_div = soup.select_one('.limit-html')
+            if summary_div:
+                metadata['summary'] = summary_div.text.strip()
+
+            # Chapters
+            chapters = []
+            # User snippet: <div data-name="chapter-list" ...>
+            chapter_list_div = soup.select_one('div[data-name="chapter-list"]')
+            if chapter_list_div:
+                 # Find links. The user snippet shows links like:
+                 # <a href="/title/..." class="link-hover link-primary visited:text-accent">Chapter 13</a>
+                 # We can select 'a' tags that have 'ch_' in href or just all links in this list that point to a title
+                 
+                 links = chapter_list_div.select('a.link-hover.link-primary')
+                 for link in links:
+                     href = link.get('href')
+                     # Ensure href is a string and matches pattern
+                     if isinstance(href, str) and '/title/' in href and not '/u/' in href:
+                         c_title = link.text.strip()
+                         c_title = html.unescape(c_title)
+                         c_title = re.sub(r'[^\x00-\x7F]+', '', c_title).strip()
+                         c_url = base_url + href if href.startswith('/') else href
+                         chapters.append({'title': c_title, 'url': c_url})
+            
+            # Reverse for consistency (oldest first? or just follow site order usually desc)
+            # Existing logic reverses them, assuming site lists new first. Bato.si snippet shows Ch 13, 12... so yes.
+            chapters.reverse()
+            
+            return manga_title, chapters, metadata
+
+        except Exception as e:
+            print(f"Error parsing bato.si info: {e}")
+            # Fallthrough might crash if variables aren't set, so return empty or raise
+            return "Error Parsing", [], {}
+
     manga_title_element = soup.find('h3', class_='item-title')
     manga_title = manga_title_element.text.strip() if manga_title_element else "Unknown Title"
     
@@ -392,6 +486,47 @@ def download_chapter(chapter_url, manga_title, chapter_title, output_dir=".", st
                 except json.JSONDecodeError as e:
                     print(f"Error decoding JSON from script tag: {e}")
                 break
+
+    if not image_urls:
+        # Fallback for bato.si style (Qwik app structure)
+        # Look for div with data-name="image-item" containing an img
+        img_elements = soup.select('div[data-name="image-item"] img')
+        if img_elements:
+             # Using print in a thread-safe way might be tricky here as it's not inside the lock, 
+             # but download_chapter is called from a thread. 
+             # However, this print is useful for debugging. 
+             # The existing code prints normally so I will follow that pattern.
+             image_urls = [img.get('src') for img in img_elements if img.get('src')]
+    
+    if not image_urls and 'bato.si' in chapter_url:
+        print(f"Trying to fetch images with Playwright for bato.si: {chapter_url}")
+        try:
+            from playwright.sync_api import sync_playwright
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                page = browser.new_page()
+                page.goto(chapter_url, timeout=60000) # Increased timeout
+                
+                # Wait for at least one image to appear
+                try:
+                    page.wait_for_selector('div[data-name="image-item"] img', timeout=30000)
+                except Exception as e:
+                     print(f"Playwright wait for selector failed: {e}")
+
+                # Extract all image srcs
+                imgs = page.query_selector_all('div[data-name="image-item"] img')
+                for img in imgs:
+                    src = img.get_attribute('src')
+                    if src:
+                        image_urls.append(src)
+                
+                browser.close()
+                print(f"Successfully extracted {len(image_urls)} images using Playwright.")
+
+        except ImportError:
+             print("Playwright is not installed. Please install it with 'pip install playwright' and 'playwright install' to support bato.si downloads.")
+        except Exception as e:
+            print(f"Error using Playwright to fetch images: {e}")
 
     if not image_urls:
         print(f"No image URLs found for {chapter_title} at {chapter_url}.")

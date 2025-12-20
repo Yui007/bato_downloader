@@ -1,4 +1,5 @@
 # Bato.to Manga Downloader
+Support for **bato.to**, **batotoo.com**, and **bato.si**.
 
 A Python-based tool for searching, listing, and downloading manga chapters from Bato.to, featuring both a Command-Line Interface (CLI) and a Graphical User Interface (GUI).
 

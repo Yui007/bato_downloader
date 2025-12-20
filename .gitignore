@@ -11,3 +11,7 @@ __pycache__/
 .Python
 /venv/
 /env/
+# PyPI build files
+dist/
+build/
+*.egg-info/
