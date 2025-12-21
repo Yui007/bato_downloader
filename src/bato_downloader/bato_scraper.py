@@ -545,7 +545,26 @@ def download_chapter(chapter_url, manga_title, chapter_title, output_dir=".", st
 
         if img_url and img_url.startswith('http'):
             try:
-                img_data = requests.get(img_url).content
+                # Helper to detect potential "k" to "n" host switch candidates
+                def looks_like_broken_batoto_url(u):
+                    return isinstance(u, str) and '//k' in u and '.mb' in u
+                
+                def replace_k_with_n(u):
+                    return u.replace('//k', '//n') if isinstance(u, str) else u
+
+                img_response = requests.get(img_url)
+                
+                # Check for 5xx/4xx errors and try fallback host if applicable
+                if not img_response.ok and looks_like_broken_batoto_url(img_url):
+                    fallback_url = replace_k_with_n(img_url)
+                    with print_lock:
+                         print(f"Warning: {img_url} returned {img_response.status_code}. Retrying with fallback: {fallback_url}")
+                    img_response = requests.get(fallback_url)
+                
+                # Raise error if both failed or if original failed and no fallback was applicable
+                img_response.raise_for_status()
+                
+                img_data = img_response.content
                 img_extension = img_url.split('.')[-1].split('?')[0]
                 img_path = os.path.join(chapter_dir, f"page_{index+1}.{img_extension}")
                 with open(img_path, 'wb') as handler:
