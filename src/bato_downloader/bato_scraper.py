@@ -18,7 +18,8 @@ def search_manga(query, max_pages=5):
     seen_urls = set() # Use a set to store unique URLs
     page = 1
     
-    domains = ["https://bato.to", "https://batotoo.com"]
+    # Primary domains use requests, bato.si requires Playwright
+    primary_domains = ["https://bato.to", "https://batotoo.com"]
     active_domain = None
 
     while page <= max_pages:
@@ -30,7 +31,7 @@ def search_manga(query, max_pages=5):
         # However, if it fails, we might want to fallback? 
         # For simplicity, if we found a working domain, we stick to it.
         
-        search_domains = [active_domain] if active_domain else domains
+        search_domains = [active_domain] if active_domain else primary_domains
         
         for domain in search_domains:
             search_url = f"{domain}/search?word={quote(query)}&page={page}"
@@ -47,6 +48,12 @@ def search_manga(query, max_pages=5):
                 continue
         
         if not response or not current_domain:
+            # If primary domains failed, try bato.si with Playwright (only on first page)
+            if page == 1 and not all_results:
+                print("Primary domains failed. Trying bato.si with Playwright...")
+                bato_si_results = _search_bato_si_playwright(query)
+                if bato_si_results:
+                    return bato_si_results
             print(f"Could not fetch search results for page {page}. Stopping.")
             break
 
@@ -105,6 +112,100 @@ def search_manga(query, max_pages=5):
         page += 1
         time.sleep(1)
     return all_results
+
+
+def _search_bato_si_playwright(query):
+    """Search bato.si using Playwright (required due to JS rendering)."""
+    import html
+    
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        print("Playwright is not installed. Cannot search bato.si.")
+        print("Install with: pip install playwright && playwright install")
+        return []
+    
+    results = []
+    search_url = f"https://bato.si/v4x-search?type=comic&word={quote(query)}"
+    
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(
+                headless=True,
+                args=["--disable-blink-features=AutomationControlled"]
+            )
+            
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+            )
+            
+            page = context.new_page()
+            
+            print(f"[bato.si] Searching: {search_url}")
+            page.goto(search_url, timeout=60000)
+            
+            # Wait for search results
+            try:
+                page.wait_for_selector(
+                    "div.flex.border-b.border-b-base-200.pb-5",
+                    timeout=30000
+                )
+            except Exception:
+                print("[bato.si] No results found or timeout waiting for results.")
+                browser.close()
+                return []
+            
+            # Extract results
+            cards = page.query_selector_all("div.flex.border-b.border-b-base-200.pb-5")
+            print(f"[bato.si] Found {len(cards)} results")
+            
+            for card in cards:
+                title_el = card.query_selector("h3 a[href^='/title/']")
+                title = title_el.inner_text().strip() if title_el else "N/A"
+                title = html.unescape(title)
+                title = re.sub(r'[^\x00-\x7F]+', '', title)
+                
+                manga_href = title_el.get_attribute("href") if title_el else None
+                manga_url = f"https://bato.si{manga_href}" if manga_href else None
+                
+                chap_el = card.query_selector("a[href*='-ch_']")
+                latest_chapter = chap_el.inner_text().strip() if chap_el else None
+                
+                # Extract authors from author links
+                authors = []
+                author_links = card.query_selector_all("a[href^='/author']")
+                for author_link in author_links:
+                    author_name = author_link.inner_text().strip()
+                    if author_name:
+                        authors.append(author_name)
+                
+                # Extract description from first line-clamp-2 div (contains alternative titles/synopsis)
+                description = None
+                desc_divs = card.query_selector_all("div.text-xs.opacity-80.line-clamp-2")
+                if desc_divs and len(desc_divs) > 0:
+                    # First div contains description/alternative names
+                    desc_text = desc_divs[0].inner_text().strip()
+                    if desc_text:
+                        # Clean up the text (limit to ~100 chars for display)
+                        description = desc_text[:100] + "..." if len(desc_text) > 100 else desc_text
+                
+                if manga_url:
+                    results.append({
+                        'title': title,
+                        'url': manga_url,
+                        'latest_chapter': latest_chapter,
+                        'release_date': None,
+                        'authors': authors,
+                        'description': description
+                    })
+            
+            browser.close()
+            
+    except Exception as e:
+        print(f"[bato.si] Error during Playwright search: {e}")
+        return []
+    
+    return results
 
 def get_manga_info(series_url):
     import html

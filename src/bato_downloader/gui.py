@@ -238,12 +238,17 @@ class BatoScraperGUI(ctk.CTk):
                 for i, manga in enumerate(results):
                     self.log_message(f"[{i+1}] {manga['title']}")
 
-                    # Add language on separate line
-                    if manga.get('language'):
+                    # Show authors if available (bato.si), otherwise show language
+                    if manga.get('authors'):
+                        authors_str = ', '.join(manga['authors']) if manga['authors'] else 'Unknown'
+                        self.log_message(f"    ✍️ Authors: {authors_str}")
+                    elif manga.get('language'):
                         lang_name = LANGUAGE_NAMES.get(manga['language'], manga['language'].capitalize())
                         self.log_message(f"    🌐 Language: {lang_name}")
-                    else:
-                        self.log_message(f"    🌐 Language: English (probably)")
+                    
+                    # Show description if available (bato.si)
+                    if manga.get('description'):
+                        self.log_message(f"    📝 {manga['description']}")
 
                     self.log_message(f"    🔗 {manga['url']}")
 
