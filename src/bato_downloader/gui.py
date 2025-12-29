@@ -144,6 +144,10 @@ class BatoScraperGUI(ctk.CTk):
 
         self.selection_button = ctk.CTkButton(self.selection_frame, text="Select", command=self.process_selection)
         self.selection_button.grid(row=0, column=2, padx=10, pady=10, sticky="e")
+        
+        self.next_page_button = ctk.CTkButton(self.selection_frame, text="Next Page ➡️", command=self.load_next_search_page)
+        self.next_page_button.grid(row=0, column=3, padx=10, pady=10, sticky="e")
+        self.next_page_button.grid_remove()  # Hide initially
 
         self.manga_title = None
         self.chapters = []
@@ -156,6 +160,9 @@ class BatoScraperGUI(ctk.CTk):
         self.max_image_workers = self.config.get("max_concurrent_image_downloads", 15)
         
         self.search_results = None # Store search results for selection
+        self.current_search_query = None  # For pagination
+        self.current_search_page = 1  # For pagination
+        self.has_next_page = False  # For pagination
 
     def on_closing(self):
         self.config["window_size"] = self.geometry()
@@ -229,11 +236,32 @@ class BatoScraperGUI(ctk.CTk):
         self.progress_bar.set(0)
         threading.Thread(target=self._search_manga, args=(query,)).start()
 
-    def _search_manga(self, query):
+    def _search_manga(self, query, page=1):
         try:
-            results = search_manga(query)
+            # Import the bato.si specific function for pagination support
+            try:
+                from .bato_scraper import _search_bato_si_playwright
+            except ImportError:
+                from bato_scraper import _search_bato_si_playwright
+            
+            # Store current query for pagination
+            self.current_search_query = query
+            self.current_search_page = page
+            
+            # Try primary domains first (bato.to, batotoo.com) - only on page 1
+            results = None
+            self.has_next_page = False
+            
+            if page == 1:
+                results = search_manga(query)
+            
+            # If no results from primary domains or on page > 1, use bato.si with Playwright
+            if not results:
+                self.log_message(f"Fetching page {page} from bato.si...")
+                results, self.has_next_page = _search_bato_si_playwright(query, page=page)
+            
             if results:
-                self.log_message(f"\n--- Search Results for '{query}' ---\n")
+                self.log_message(f"\n--- Search Results for '{query}' (Page {page}) ---\n")
 
                 for i, manga in enumerate(results):
                     self.log_message(f"[{i+1}] {manga['title']}")
@@ -266,15 +294,31 @@ class BatoScraperGUI(ctk.CTk):
                 # Store results and show selection input
                 self.search_results = results
                 self.log_message("Enter the number of the series you want to select, or 0 to cancel:")
+                self.log_message("Click 'Next Page' to see more results.")
+                self.next_page_button.grid()  # Always show Next Page button
+                
                 self.selection_frame.grid() # Show the selection input frame
                 self.selection_entry.delete(0, ctk.END)
                 self.selection_entry.focus_set()
             else:
-                self.log_message(f"No results found for '{query}'.")
+                # No results on this page
+                if page > 1:
+                    self.log_message(f"No more results on page {page}. Showing previous results.")
+                else:
+                    self.log_message(f"No results found for '{query}'.")
+                    self.next_page_button.grid_remove()
         except Exception as e:
             self.log_message(f"Error during search: {e}")
         finally:
             self.progress_bar.set(1)
+
+    def load_next_search_page(self):
+        """Load the next page of search results."""
+        if self.current_search_query:
+            next_page = self.current_search_page + 1
+            self.log_message(f"\nLoading page {next_page}...")
+            self.progress_bar.set(0)
+            threading.Thread(target=self._search_manga, args=(self.current_search_query, next_page)).start()
 
     def process_selection(self):
         if not self.search_results:
@@ -291,12 +335,20 @@ class BatoScraperGUI(ctk.CTk):
                 self.log_message(f"Selected: {selected_manga['title']}. URL set in Series URL field.")
                 self.log_message("Fetching info for selected manga...")
                 self.selection_frame.grid_remove() # Hide the selection frame
+                self.next_page_button.grid_remove()  # Hide Next Page button
                 self.search_results = None
+                self.current_search_query = None  # Reset pagination state
+                self.current_search_page = 1
+                self.has_next_page = False
                 self.get_info_thread() # Automatically get info for the selected manga
             elif selection == 0:
                 self.log_message("Search selection cancelled.")
                 self.selection_frame.grid_remove()
+                self.next_page_button.grid_remove()
                 self.search_results = None
+                self.current_search_query = None
+                self.current_search_page = 1
+                self.has_next_page = False
             else:
                 self.log_message("Invalid selection. Please enter a valid number.")
         except ValueError:

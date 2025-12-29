@@ -51,7 +51,7 @@ def search_manga(query, max_pages=5):
             # If primary domains failed, try bato.si with Playwright (only on first page)
             if page == 1 and not all_results:
                 print("Primary domains failed. Trying bato.si with Playwright...")
-                bato_si_results = _search_bato_si_playwright(query)
+                bato_si_results, _ = _search_bato_si_playwright(query, page=1)
                 if bato_si_results:
                     return bato_si_results
             print(f"Could not fetch search results for page {page}. Stopping.")
@@ -114,8 +114,8 @@ def search_manga(query, max_pages=5):
     return all_results
 
 
-def _search_bato_si_playwright(query):
-    """Search bato.si using Playwright (required due to JS rendering)."""
+def _search_bato_si_playwright(query, page=1):
+    """Search bato.si using Playwright (required due to JS rendering). Returns results for a single page."""
     import html
     
     try:
@@ -123,10 +123,10 @@ def _search_bato_si_playwright(query):
     except ImportError:
         print("Playwright is not installed. Cannot search bato.si.")
         print("Install with: pip install playwright && playwright install")
-        return []
+        return [], False  # results, has_next_page
     
     results = []
-    search_url = f"https://bato.si/v4x-search?type=comic&word={quote(query)}"
+    has_next_page = False
     
     try:
         with sync_playwright() as p:
@@ -139,25 +139,26 @@ def _search_bato_si_playwright(query):
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
             )
             
-            page = context.new_page()
+            bpage = context.new_page()
             
-            print(f"[bato.si] Searching: {search_url}")
-            page.goto(search_url, timeout=60000)
+            search_url = f"https://bato.si/v4x-search?type=comic&word={quote(query)}&page={page}"
+            print(f"[bato.si] Searching page {page}: {search_url}")
+            bpage.goto(search_url, timeout=60000)
             
             # Wait for search results
             try:
-                page.wait_for_selector(
+                bpage.wait_for_selector(
                     "div.flex.border-b.border-b-base-200.pb-5",
                     timeout=30000
                 )
             except Exception:
-                print("[bato.si] No results found or timeout waiting for results.")
+                print(f"[bato.si] No results found on page {page}.")
                 browser.close()
-                return []
+                return [], False
             
             # Extract results
-            cards = page.query_selector_all("div.flex.border-b.border-b-base-200.pb-5")
-            print(f"[bato.si] Found {len(cards)} results")
+            cards = bpage.query_selector_all("div.flex.border-b.border-b-base-200.pb-5")
+            print(f"[bato.si] Found {len(cards)} results on page {page}")
             
             for card in cards:
                 title_el = card.query_selector("h3 a[href^='/title/']")
@@ -179,14 +180,12 @@ def _search_bato_si_playwright(query):
                     if author_name:
                         authors.append(author_name)
                 
-                # Extract description from first line-clamp-2 div (contains alternative titles/synopsis)
+                # Extract description from first line-clamp-2 div
                 description = None
                 desc_divs = card.query_selector_all("div.text-xs.opacity-80.line-clamp-2")
                 if desc_divs and len(desc_divs) > 0:
-                    # First div contains description/alternative names
                     desc_text = desc_divs[0].inner_text().strip()
                     if desc_text:
-                        # Clean up the text (limit to ~100 chars for display)
                         description = desc_text[:100] + "..." if len(desc_text) > 100 else desc_text
                 
                 if manga_url:
@@ -199,13 +198,17 @@ def _search_bato_si_playwright(query):
                         'description': description
                     })
             
+            # Check if next page exists
+            next_page_link = bpage.query_selector(f"a[href*='page={page + 1}']")
+            has_next_page = next_page_link is not None
+            
             browser.close()
             
     except Exception as e:
         print(f"[bato.si] Error during Playwright search: {e}")
-        return []
+        return [], False
     
-    return results
+    return results, has_next_page
 
 def get_manga_info(series_url):
     import html
