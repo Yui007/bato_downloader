@@ -575,8 +575,52 @@ class BatoScraperGUI(ctk.CTk):
         self.max_image_downloads_label.configure(text=f"Value: {int(self.max_image_downloads_slider.get())}")
 
 
+def ensure_playwright_browsers():
+    """Check if Playwright Chromium is installed, and install it if not."""
+    import subprocess
+    import sys
+    
+    try:
+        from playwright.sync_api import sync_playwright
+        
+        # Try to launch browser to check if it's installed
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                browser.close()
+            print("[Playwright] Chromium browser is already installed.")
+            return True
+        except Exception as e:
+            if "Executable doesn't exist" in str(e) or "playwright install" in str(e).lower():
+                print("[Playwright] Chromium browser not found. Installing...")
+                try:
+                    # Run playwright install chromium
+                    result = subprocess.run(
+                        [sys.executable, "-m", "playwright", "install", "chromium"],
+                        capture_output=True,
+                        text=True
+                    )
+                    if result.returncode == 0:
+                        print("[Playwright] Chromium installed successfully!")
+                        return True
+                    else:
+                        print(f"[Playwright] Installation failed: {result.stderr}")
+                        return False
+                except Exception as install_error:
+                    print(f"[Playwright] Error during installation: {install_error}")
+                    return False
+            else:
+                print(f"[Playwright] Browser check error: {e}")
+                return False
+    except ImportError:
+        print("[Playwright] Playwright package not found. Some features may not work.")
+        return False
+
 
 def main_gui():
+    # Ensure Playwright browsers are installed on first run
+    ensure_playwright_browsers()
+    
     config = load_config()
     ctk.set_appearance_mode(config.get("theme", "System"))  # Modes: "System" (default), "Dark", "Light"
     ctk.set_default_color_theme(config.get("color_theme", "blue"))  # Themes: "blue" (default), "green", "dark-blue"
@@ -587,3 +631,4 @@ def main_gui():
 
 if __name__ == "__main__":
     main_gui()
+
