@@ -558,7 +558,8 @@ def sanitize_filename(name: str) -> str:
     # Remove characters that are invalid in Windows file paths
     name = re.sub(r'[<>:"/\\|?*]', '', name)
     # Handle Unicode by removing emoji and special characters that might cause issues
-    name = re.sub(r'[^\w\s-]', '', name)
+    # Preserve dots for decimal chapter numbers (e.g., 30.1, 30.2)
+    name = re.sub(r'[^\w\s.\-]', '', name)
     # Replace spaces with underscores and remove multiple underscores
     name = re.sub(r'\s+', '_', name)
     name = re.sub(r'_+', '_', name).strip('_')

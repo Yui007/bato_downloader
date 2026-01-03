@@ -367,28 +367,37 @@ class BatoScraperGUI(ctk.CTk):
             messagebox.showinfo("Info", "Please get manga info first using 'Get Info' or 'Search' and selecting a series.")
             return
         
-        range_input = ctk.CTkInputDialog(text="Enter chapter range (e.g., 1-10):", title="Download Range")
+        range_input = ctk.CTkInputDialog(text="Enter chapter number or range (e.g., '5' or '1-10'):", title="Download Chapter(s)")
         chapter_range_str = range_input.get_input()
 
         if not chapter_range_str:
-            self.log_message("Download range cancelled.")
+            self.log_message("Download cancelled.")
             return
 
         try:
-            start_chap_str, end_chap_str = chapter_range_str.split('-')
-            start_chap = int(start_chap_str)
-            end_chap = int(end_chap_str)
+            # Support single chapter (e.g., "5") or range (e.g., "1-10")
+            if '-' in chapter_range_str:
+                start_chap_str, end_chap_str = chapter_range_str.split('-')
+                start_chap = int(start_chap_str)
+                end_chap = int(end_chap_str)
+            else:
+                # Single chapter number
+                start_chap = int(chapter_range_str)
+                end_chap = start_chap
 
             if not (1 <= start_chap <= len(self.chapters) and 1 <= end_chap <= len(self.chapters) and start_chap <= end_chap):
-                messagebox.showerror("Input Error", "Invalid chapter range. Please enter valid numbers within the available range.")
+                messagebox.showerror("Input Error", "Invalid chapter number(s). Please enter valid numbers within the available range.")
                 return
 
             chapters_to_download = self.chapters[start_chap - 1:end_chap]
-            self.log_message(f"\n--- Downloading chapters {start_chap} to {end_chap} ---")
+            if start_chap == end_chap:
+                self.log_message(f"\n--- Downloading chapter {start_chap} ---")
+            else:
+                self.log_message(f"\n--- Downloading chapters {start_chap} to {end_chap} ---")
             self.progress_bar.set(0)
             threading.Thread(target=self._download_chapters, args=(chapters_to_download,)).start()
         except ValueError:
-            messagebox.showerror("Input Error", "Invalid range format. Use 'start-end' (e.g., '1-10').")
+            messagebox.showerror("Input Error", "Invalid format. Use a single number (e.g., '5') or range (e.g., '1-10').")
         except Exception as e:
             messagebox.showerror("Error", f"An unexpected error occurred: {e}")
 

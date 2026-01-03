@@ -129,7 +129,7 @@ def list_chapters_func(chapters):
 def download(
     series_url: Annotated[str, typer.Argument(help="The Bato.to series URL.")],
     all_chapters: Annotated[bool, typer.Option("--all", "-a", help="Download all chapters.")] = False,
-    chapter_range: Annotated[Optional[str], typer.Option("--range", "-r", help="Download a specific range of chapters (e.g., '1-10').")] = None,
+    chapter_range: Annotated[Optional[str], typer.Option("--range", "-r", help="Download chapter(s) - single (e.g., '5') or range (e.g., '1-10').")] = None,
     output_dir: Annotated[Optional[str], typer.Option("--output", "-o", help="Directory to save downloaded chapters.")] = None,
     max_workers: Annotated[int, typer.Option("--max-workers", "-w", help="Maximum number of concurrent chapter downloads.")] = 3,
     image_workers: Annotated[int, typer.Option("--image-workers", "-iw", help="Maximum number of concurrent image downloads per chapter.")] = 15,
@@ -170,18 +170,27 @@ def download(
         rprint("\n[bold blue]--- Downloading all chapters ---[/bold blue]")
     elif chapter_range:
         try:
-            start_chap_str, end_chap_str = chapter_range.split('-')
-            start_chap = int(start_chap_str)
-            end_chap = int(end_chap_str)
+            # Support single chapter (e.g., "5") or range (e.g., "1-10")
+            if '-' in chapter_range:
+                start_chap_str, end_chap_str = chapter_range.split('-')
+                start_chap = int(start_chap_str)
+                end_chap = int(end_chap_str)
+            else:
+                # Single chapter number
+                start_chap = int(chapter_range)
+                end_chap = start_chap
 
             if not (1 <= start_chap <= len(chapters) and 1 <= end_chap <= len(chapters) and start_chap <= end_chap):
-                rprint("[bold red]Invalid chapter range. Please enter valid numbers within the available range.[/bold red]")
+                rprint("[bold red]Invalid chapter number(s). Please enter valid numbers within the available range.[/bold red]")
                 raise typer.Exit(code=1)
 
             chapters_to_download = chapters[start_chap - 1:end_chap]
-            rprint(f"\n[bold blue]--- Downloading chapters {start_chap} to {end_chap} ---[/bold blue]")
+            if start_chap == end_chap:
+                rprint(f"\n[bold blue]--- Downloading chapter {start_chap} ---[/bold blue]")
+            else:
+                rprint(f"\n[bold blue]--- Downloading chapters {start_chap} to {end_chap} ---[/bold blue]")
         except ValueError:
-            rprint("[bold red]Invalid range format. Use 'start-end' (e.g., '1-10').[/bold red]")
+            rprint("[bold red]Invalid format. Use a single number (e.g., '5') or range (e.g., '1-10').[/bold red]")
             raise typer.Exit(code=1)
     else:
         rprint("[bold yellow]No download option selected. Use --all or --range.[/bold yellow]")
