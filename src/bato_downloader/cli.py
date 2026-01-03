@@ -39,6 +39,29 @@ if sys.platform.startswith('win'):
 app = typer.Typer(help="Bato.to Manga Scraper CLI. Download manga chapters from Bato.to.")
 console = Console()
 
+@app.command(name="install-browsers", help="Install Playwright Chromium browser (required for bato.si).")
+def install_browsers():
+    """
+    Installs Playwright Chromium browser for bato.si support.
+    """
+    import subprocess
+    
+    rprint("[bold blue]Installing Playwright Chromium browser...[/bold blue]")
+    
+    try:
+        result = subprocess.run(
+            ["playwright", "install", "chromium"],
+            capture_output=False  # Show output in terminal
+        )
+        if result.returncode == 0:
+            rprint("[bold green]✓ Chromium installed successfully![/bold green]")
+        else:
+            rprint("[bold red]✗ Installation failed. Please try running: playwright install chromium[/bold red]")
+    except FileNotFoundError:
+        rprint("[bold red]✗ Playwright not found. Please install it first: pip install playwright[/bold red]")
+    except Exception as e:
+        rprint(f"[bold red]✗ Error: {e}[/bold red]")
+
 @app.command(name="info", help="Get information about a manga series.")
 def get_info(
     series_url: Annotated[str, typer.Argument(help="The Bato.to series URL (e.g., https://bato.to/series/143275/no-guard-wife).")]

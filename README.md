@@ -43,7 +43,17 @@ This is the easiest and fastest way to get started.
     ```bash
     pip install bato-downloader
     ```
-2.  **Install Playwright browsers (required for bato.si support/handled automatically for EXE users):**
+2.  **Install Playwright browsers (required for bato.si support):**
+    
+    **Option A - Via CLI:**
+    ```bash
+    bato-downloader install-browsers
+    ```
+    
+    **Option B - Via GUI:**
+    Open Settings → Click "Install Chromium Browser" button
+    
+    **Option C - Manually:**
     ```bash
     pip install playwright
     python -m playwright install chromium
