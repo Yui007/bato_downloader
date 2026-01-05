@@ -52,9 +52,10 @@ class BatoScraperGUI(ctk.CTk):
 
         # Configure grid layout
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(0, weight=0)
-        self.grid_rowconfigure(1, weight=1)
-        self.grid_rowconfigure(2, weight=0)
+        self.grid_rowconfigure(0, weight=0)  # Input frame - fixed
+        self.grid_rowconfigure(1, weight=0)  # Action frame - fixed
+        self.grid_rowconfigure(2, weight=0)  # Progress bar - fixed
+        self.grid_rowconfigure(3, weight=1)  # Output textbox - expands
 
         # --- Input Frame ---
         self.input_frame = ctk.CTkFrame(self)
