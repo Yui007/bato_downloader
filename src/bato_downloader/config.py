@@ -10,7 +10,10 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "max_concurrent_image_downloads": 15,
     "window_size": "800x700",
     "theme": "System",  # System, Dark, Light
-    "color_theme": "blue" # blue, green, dark-blue
+    "color_theme": "blue",  # blue, green, dark-blue
+    "convert_to_pdf": False,
+    "convert_to_cbz": False,
+    "keep_images": True
 }
 
 def load_config() -> Dict[str, Any]:

@@ -163,9 +163,24 @@ class BatoScraperGUI(ctk.CTk):
         self.current_search_query = None  # For pagination
         self.current_search_page = 1  # For pagination
         self.has_next_page = False  # For pagination
+        
+        # Load checkbox states from config
+        if self.config.get("convert_to_pdf", False):
+            self.convert_pdf_checkbox.select()
+        if self.config.get("convert_to_cbz", False):
+            self.convert_cbz_checkbox.select()
+        if self.config.get("keep_images", True):
+            self.keep_images_checkbox.select()
+        # Enable keep_images checkbox if any conversion is checked
+        if self.config.get("convert_to_pdf") or self.config.get("convert_to_cbz"):
+            self.keep_images_checkbox.configure(state="normal")
 
     def on_closing(self):
         self.config["window_size"] = self.geometry()
+        # Save checkbox states
+        self.config["convert_to_pdf"] = self.convert_pdf_checkbox.get() == 1
+        self.config["convert_to_cbz"] = self.convert_cbz_checkbox.get() == 1
+        self.config["keep_images"] = self.keep_images_checkbox.get() == 1
         save_config(self.config)
         self.destroy()
 
@@ -367,7 +382,7 @@ class BatoScraperGUI(ctk.CTk):
             messagebox.showinfo("Info", "Please get manga info first using 'Get Info' or 'Search' and selecting a series.")
             return
         
-        range_input = ctk.CTkInputDialog(text="Enter chapter number or range (e.g., '5' or '1-10'):", title="Download Chapter(s)")
+        range_input = ctk.CTkInputDialog(text="Enter chapter(s): '5', '1-10', or '4, 16, 20':", title="Download Chapter(s)")
         chapter_range_str = range_input.get_input()
 
         if not chapter_range_str:
@@ -375,29 +390,40 @@ class BatoScraperGUI(ctk.CTk):
             return
 
         try:
-            # Support single chapter (e.g., "5") or range (e.g., "1-10")
-            if '-' in chapter_range_str:
+            chapters_to_download = []
+            
+            # Check for comma-separated list first (e.g., "4, 16, 20")
+            if ',' in chapter_range_str:
+                chapter_nums = [int(x.strip()) for x in chapter_range_str.split(',')]
+                for num in chapter_nums:
+                    if not (1 <= num <= len(self.chapters)):
+                        messagebox.showerror("Input Error", f"Chapter {num} is out of range (1-{len(self.chapters)}).")
+                        return
+                    chapters_to_download.append(self.chapters[num - 1])
+                self.log_message(f"\n--- Downloading chapters: {', '.join(map(str, chapter_nums))} ---")
+            # Check for range (e.g., "1-10")
+            elif '-' in chapter_range_str:
                 start_chap_str, end_chap_str = chapter_range_str.split('-')
                 start_chap = int(start_chap_str)
                 end_chap = int(end_chap_str)
-            else:
-                # Single chapter number
-                start_chap = int(chapter_range_str)
-                end_chap = start_chap
-
-            if not (1 <= start_chap <= len(self.chapters) and 1 <= end_chap <= len(self.chapters) and start_chap <= end_chap):
-                messagebox.showerror("Input Error", "Invalid chapter number(s). Please enter valid numbers within the available range.")
-                return
-
-            chapters_to_download = self.chapters[start_chap - 1:end_chap]
-            if start_chap == end_chap:
-                self.log_message(f"\n--- Downloading chapter {start_chap} ---")
-            else:
+                if not (1 <= start_chap <= len(self.chapters) and 1 <= end_chap <= len(self.chapters) and start_chap <= end_chap):
+                    messagebox.showerror("Input Error", "Invalid chapter range.")
+                    return
+                chapters_to_download = self.chapters[start_chap - 1:end_chap]
                 self.log_message(f"\n--- Downloading chapters {start_chap} to {end_chap} ---")
+            # Single chapter number
+            else:
+                chap_num = int(chapter_range_str)
+                if not (1 <= chap_num <= len(self.chapters)):
+                    messagebox.showerror("Input Error", f"Chapter {chap_num} is out of range.")
+                    return
+                chapters_to_download = [self.chapters[chap_num - 1]]
+                self.log_message(f"\n--- Downloading chapter {chap_num} ---")
+
             self.progress_bar.set(0)
             threading.Thread(target=self._download_chapters, args=(chapters_to_download,)).start()
         except ValueError:
-            messagebox.showerror("Input Error", "Invalid format. Use a single number (e.g., '5') or range (e.g., '1-10').")
+            messagebox.showerror("Input Error", "Invalid format. Use: '5', '1-10', or '4, 16, 20'.")
         except Exception as e:
             messagebox.showerror("Error", f"An unexpected error occurred: {e}")
 
