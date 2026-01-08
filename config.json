@@ -1,8 +1,10 @@
 {
-    "output_directory": ".",
-    "max_concurrent_chapter_downloads": 5,
-    "max_concurrent_image_downloads": 12,
-    "window_size": "800x700+373+251",
-    "theme": "Dark",
-    "color_theme": "green"
+  "download_format": "pdf",
+  "keep_images_after_conversion": true,
+  "output_directory": "",
+  "concurrent_chapters": 3,
+  "concurrent_images": 5,
+  "max_chapter_retries": 3,
+  "max_image_retries": 3,
+  "enable_detailed_logs": false
 }
