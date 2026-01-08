@@ -4,32 +4,61 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bato-downloader"
-version = "5.2"
+version = "6.0.0"
 authors = [
   { name="Yui007", email="akrtrt782@gmail.com" },
 ]
-description = "A simple tool to download manga from Bato.to, with both a CLI and GUI."
+description = "A beautiful manga downloader for Bato.to with PyQt6 GUI and Rich CLI"
 readme = "README.md"
 requires-python = ">=3.8"
+license = {text = "MIT"}
+keywords = ["manga", "downloader", "bato", "batoto", "comic", "webtoon"]
 classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Environment :: X11 Applications :: Qt",
+    "Intended Audience :: End Users/Desktop",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Multimedia :: Graphics",
 ]
 dependencies = [
-    "typer",
-    "rich",
-    "customtkinter",
-    "requests",
-    "beautifulsoup4",
-    "Pillow",
-    "playwright",
+    "PyQt6>=6.0.0",
+    "typer>=0.9.0",
+    "rich>=13.0.0",
+    "requests>=2.28.0",
+    "Pillow>=9.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pyinstaller",
+    "build",
+    "twine",
 ]
 
 [project.urls]
 Homepage = "https://github.com/Yui007/bato_downloader"
+Repository = "https://github.com/Yui007/bato_downloader"
 Issues = "https://github.com/Yui007/bato_downloader/issues"
 
 [project.scripts]
-bato-downloader = "bato_downloader.cli:app"
-bato-downloader-gui = "bato_downloader.gui:main_gui"
+bato-downloader = "cli:main_menu"
+bato-downloader-gui = "main:main"
+
+[project.gui-scripts]
+bato-gui = "main:main"
+
+[tool.setuptools]
+py-modules = ["cli", "main"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["gui*", "src*"]

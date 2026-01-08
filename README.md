@@ -2,6 +2,7 @@
 
 # 📚 Bato.to Manga Downloader
 
+[![PyPI](https://img.shields.io/pypi/v/bato-downloader?style=for-the-badge&logo=pypi&logoColor=white&label=PyPI)](https://pypi.org/project/bato-downloader/)
 [![Python](https://img.shields.io/badge/Python-3.8+-blue?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![PyQt6](https://img.shields.io/badge/PyQt6-GUI-green?style=for-the-badge&logo=qt&logoColor=white)](https://pypi.org/project/PyQt6/)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
@@ -60,32 +61,31 @@
 </div>
 
 ---
-## 🚀 Quick Start
 
-### Option 1: Download Executables (Easiest)
+## 🚀 Installation
+
+### Option 1: Install from PyPI (Recommended)
+
+```bash
+# Install from PyPI
+pip install bato-downloader
+
+# Launch GUI
+bato-downloader-gui
+
+# Launch CLI
+bato-downloader
+```
+
+> ✅ That's it! All dependencies are installed automatically.
+
+### Option 2: Download Executables
 
 | Platform | GUI | CLI |
 |----------|-----|-----|
 | Windows | [📥 BatoDownloaderGUI.exe](https://github.com/Yui007/bato_downloader/releases) | [📥 BatoDownloaderCLI.exe](https://github.com/Yui007/bato_downloader/releases) |
 
-> Just download and run - no installation needed!
-
-### Option 2: Install from Source
-
-```bash
-# Clone the repository
-git clone https://github.com/Yui007/bato_downloader.git
-cd bato_downloader
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run GUI
-python main.py
-
-# Or run CLI
-python cli.py
-```
+> Just download and run - no Python needed!
 
 ---
 
@@ -131,13 +131,13 @@ Select option [1/2/3/4]:
 
 ```bash
 # Interactive mode
-python cli.py
+bato-downloader
 
 # Search for manga
-python cli.py search "Solo Leveling"
+bato-downloader search "Solo Leveling"
 
 # Download from URL
-python cli.py download "https://bato.si/title/81514-solo-leveling"
+bato-downloader download "https://bato.si/title/81514-solo-leveling"
 ```
 
 ---
@@ -153,28 +153,6 @@ Settings are saved in `config.json`:
 | ⚡ `concurrent_chapters` | 1-10 | `3` |
 | 🖼️ `concurrent_images` | 1-20 | `5` |
 | 💾 `keep_images_after_conversion` | `true` / `false` | `true` |
-
----
-
-## 🔨 Building Executables
-
-```bash
-# Build GUI only
-.\build_gui.bat
-
-# Build CLI only
-.\build_cli.bat
-
-# Build both at once
-.\build_all.bat
-```
-
-**Output:**
-```
-dist/
-├── BatoDownloaderGUI.exe   # 🖼️ Windowed application
-└── BatoDownloaderCLI.exe   # 💻 Console application
-```
 
 ---
 
@@ -248,6 +226,49 @@ pip install Pillow --upgrade
 ```
 
 </details>
+
+---
+
+## 🛠️ Development
+
+### Install from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/Yui007/bato_downloader.git
+cd bato_downloader
+
+# Install in development mode
+pip install -e .
+
+# Run directly
+bato-downloader      # CLI
+bato-downloader-gui  # GUI
+
+# Or run scripts directly
+python cli.py
+python main.py
+```
+
+### Building Executables
+
+```bash
+# Build GUI only
+.\build_gui.bat
+
+# Build CLI only
+.\build_cli.bat
+
+# Build both at once
+.\build_all.bat
+```
+
+**Output:**
+```
+dist/
+├── BatoDownloaderGUI.exe   # 🖼️ Windowed application
+└── BatoDownloaderCLI.exe   # 💻 Console application
+```
 
 ---
 
