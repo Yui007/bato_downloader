@@ -46,8 +46,13 @@ def fetch_chapters(manga_url: str) -> List[Chapter]:
     logger.debug(f"Fetching chapters from: {manga_url}")
     
     # Ensure we're fetching from the chapters section
-    if '?' not in manga_url:
-        manga_url = f"{manga_url}?start=1#chapters"
+
+    # NOTE:
+    # bato.si paginates chapter listings in batches of 100 using the `start` query parameter.
+    # While `start=1`, `start=101`, etc. return paginated results, testing shows that
+    # `start=-1` returns the full chapter list in a single response.
+    
+    manga_url = f"{manga_url.split('?', 1)[0]}?start=-1"
     
     resp = requests.get(manga_url, headers=HEADERS, timeout=30)
     resp.raise_for_status()
