@@ -15,7 +15,7 @@ HEADERS = {
 
 # Regex pattern for xbat.tv image CDN (i*.zfs*.com/media/)
 IMG_REGEX = re.compile(
-    r"https://i\d+\.(?:zfs\d+)\.com/media/[^\"']+?\.(?:webp|jpg|png)"
+    r"https://i\d+\.(?:zfs\d+)\.com/media/[^\"']+?\.(?:webp|jpg|png|jpeg)"
 )
 
 

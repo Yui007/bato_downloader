@@ -7,7 +7,7 @@
 [![PyQt6](https://img.shields.io/badge/PyQt6-GUI-green?style=for-the-badge&logo=qt&logoColor=white)](https://pypi.org/project/PyQt6/)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
-**Beautiful manga downloader for bato.to, batotoo.com, and bato.si**
+**Beautiful manga downloader for xbat.tv (formerly bato.to)**
 
 *Search, browse, and download your favorite manga with ease*
 
@@ -137,7 +137,7 @@ bato-downloader
 bato-downloader search "Solo Leveling"
 
 # Download from URL
-bato-downloader download "https://bato.si/title/81514-solo-leveling"
+bato-downloader download "https://xbat.tv/title/81514-solo-leveling"
 ```
 
 ---
@@ -213,8 +213,8 @@ bato_downloader/
 <details>
 <summary><b>❌ Invalid URL error</b></summary>
 
-- URL must contain `bato` and `/title/`
-- Example: `https://bato.si/title/81514-solo-leveling`
+- URL must contain `bato` or `xbat` and `/title/`
+- Example: `https://xbat.tv/title/81514-solo-leveling`
 
 </details>
 
