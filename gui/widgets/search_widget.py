@@ -332,8 +332,8 @@ class SearchWidget(QWidget):
         """Handle URL load button click."""
         url = self.url_input.text().strip()
         if url:
-            # Validate it looks like a xbat URL
-            if 'xbat' in url.lower() and '/title/' in url:
+            # Validate it looks like a bato/xbat URL
+            if ('bato' in url.lower() or 'xbat' in url.lower()) and '/title/' in url:
                 self.url_entered.emit(url)
             else:
                 self.results_label.setText("Invalid URL. Please enter a valid xbat.tv manga URL.")

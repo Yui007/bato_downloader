@@ -68,19 +68,28 @@ def display_manga_info(info: MangaInfo):
     console.print(Panel(table, title="[bold]Manga Info[/bold]", border_style="green"))
 
 
-def display_chapters(chapters: List[Chapter], page: int = 1, per_page: int = 200):
-    """Display chapters with pagination."""
-    total_pages = (len(chapters) + per_page - 1) // per_page
-    start = (page - 1) * per_page
-    end = start + per_page
-    page_chapters = chapters[start:end]
+def display_chapters(chapters: List[Chapter], page: int = 1, per_page: int = 0):
+    """Display chapters with pagination. per_page=0 means show all."""
+    config = get_config()
+    limit = per_page if per_page > 0 else config.cli_chapters_display_limit
+    
+    if limit == 0:
+        # Show all chapters
+        total_pages = 1
+        page_chapters = chapters
+    else:
+        total_pages = (len(chapters) + limit - 1) // limit
+        start = (page - 1) * limit
+        end = start + limit
+        page_chapters = chapters[start:end]
     
     table = Table(title=f"Chapters (Page {page}/{total_pages})", show_header=True)
     table.add_column("#", style="dim", width=4)
     table.add_column("Chapter", style="cyan")
     table.add_column("Title", style="white")
     
-    for i, chapter in enumerate(page_chapters, start=start+1):
+    start_idx = 0 if limit == 0 else (page - 1) * limit
+    for i, chapter in enumerate(page_chapters, start=start_idx+1):
         table.add_row(str(i), chapter.number, chapter.title or "")
     
     console.print(table)
@@ -198,8 +207,8 @@ def download_by_url():
     
     url = Prompt.ask("Enter manga URL")
     
-    if not url or "xbat" not in url.lower():
-        console.print("[red]Invalid URL. Please enter a valid xbat.tv URL.[/red]")
+    if not url or not (("bato" in url.lower() or "xbat" in url.lower()) and "/title/" in url):
+        console.print("[red]Invalid URL. Please enter a valid xbat.tv manga URL.[/red]")
         Prompt.ask("\nPress Enter to continue")
         return
     
@@ -346,6 +355,7 @@ def settings_menu():
         table.add_row("[6]", "Max Image Retries", str(config.max_image_retries))
         table.add_row("[7]", "Keep Images After Convert", "Yes" if config.keep_images_after_conversion else "No")
         table.add_row("[8]", "Enable Detailed Logs", "Yes" if config.enable_detailed_logs else "No")
+        table.add_row("[9]", "CLI Chapters Display Limit", str(config.cli_chapters_display_limit) if config.cli_chapters_display_limit > 0 else "All")
         table.add_row("", "", "")
         table.add_row("[0]", "Back to Main Menu", "")
         
@@ -395,6 +405,12 @@ def settings_menu():
             console.print("[green]✓ Saved[/green]")
         elif choice == "8":
             config.enable_detailed_logs = Confirm.ask("Enable detailed logs?")
+            config.save()
+            console.print("[green]✓ Saved[/green]")
+        elif choice == "9":
+            console.print("\n[dim]Enter 0 to show ALL chapters[/dim]")
+            new_val = IntPrompt.ask("Chapters display limit", default=config.cli_chapters_display_limit)
+            config.cli_chapters_display_limit = max(0, new_val)
             config.save()
             console.print("[green]✓ Saved[/green]")
 
