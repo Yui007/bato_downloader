@@ -230,7 +230,7 @@ class SearchWidget(QWidget):
         url_container.setSpacing(10)
         
         self.url_input = QLineEdit()
-        self.url_input.setPlaceholderText("Paste manga URL (e.g., https://bato.si/title/81514-solo-leveling-official)")
+        self.url_input.setPlaceholderText("Paste manga URL (e.g., https://xbat.tv/title/81514-solo-leveling-official)")
         self.url_input.setMinimumHeight(45)
         self.url_input.returnPressed.connect(self._on_url_load)
         url_container.addWidget(self.url_input)
@@ -332,11 +332,11 @@ class SearchWidget(QWidget):
         """Handle URL load button click."""
         url = self.url_input.text().strip()
         if url:
-            # Validate it looks like a bato URL
-            if 'bato' in url.lower() and '/title/' in url:
+            # Validate it looks like a bato/xbat URL
+            if ('bato' in url.lower() or 'xbat' in url.lower()) and '/title/' in url:
                 self.url_entered.emit(url)
             else:
-                self.results_label.setText("Invalid URL. Please enter a valid bato.to manga URL.")
+                self.results_label.setText("Invalid URL. Please enter a valid xbat.tv manga URL.")
     
     def search_requested(self, query: str, page: int = 1):
         """Override this or connect to signal."""
