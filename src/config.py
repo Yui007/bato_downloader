@@ -34,6 +34,9 @@ class Config:
     max_chapter_retries: int = 3
     max_image_retries: int = 3
     
+    # CLI settings
+    cli_chapters_display_limit: int = 0  # 0 = show all chapters
+    
     # Logging
     enable_detailed_logs: bool = False
     
