@@ -48,7 +48,7 @@ def fetch_chapters(manga_url: str) -> List[Chapter]:
     # Ensure we're fetching from the chapters section
 
     # NOTE:
-    # bato.si paginates chapter listings in batches of 100 using the `start` query parameter.
+    # bato.si paginates (Now xbat.tv) chapter listings in batches of 100 using the `start` query parameter.
     # While `start=1`, `start=101`, etc. return paginated results, testing shows that
     # `start=-1` returns the full chapter list in a single response.
     
@@ -79,7 +79,7 @@ def fetch_chapters(manga_url: str) -> List[Chapter]:
         
         # Build full URL
         if url_path.startswith('/'):
-            full_url = f"https://bato.si{url_path}"
+            full_url = f"https://xbat.tv{url_path}"
         else:
             full_url = url_path
         

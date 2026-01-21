@@ -8,7 +8,7 @@ from typing import List, Optional
 
 from ..logger import get_logger
 
-API_URL = "https://bato.si/ap2/"
+API_URL = "https://xbat.tv/ap2/"
 
 HEADERS = {
     "Content-Type": "application/json",
@@ -34,8 +34,8 @@ class SearchResult:
     def full_url(self) -> str:
         """Get the full URL for the manga."""
         if self.url_path.startswith('/'):
-            return f"https://bato.si{self.url_path}"
-        return f"https://bato.si/{self.url_path}"
+            return f"https://xbat.tv{self.url_path}"
+        return f"https://xbat.tv/{self.url_path}"
 
 
 def search_manga(query: str, page: int = 1, size: int = 30) -> List[SearchResult]:
@@ -114,7 +114,7 @@ def search_manga(query: str, page: int = 1, size: int = 30) -> List[SearchResult
         # Get cover URL (prefer 600px version)
         cover_url = item_data.get("urlCover600") or item_data.get("urlCoverOri")
         if cover_url and not cover_url.startswith("http"):
-            cover_url = f"https://bato.si{cover_url}"
+            cover_url = f"https://xbat.tv{cover_url}"
         
         # Get latest chapter info
         latest_chap = item_data.get("chapterNode_up_to", {}).get("data", {})

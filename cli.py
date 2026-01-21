@@ -198,8 +198,8 @@ def download_by_url():
     
     url = Prompt.ask("Enter manga URL")
     
-    if not url or "bato" not in url.lower():
-        console.print("[red]Invalid URL. Please enter a valid bato.to URL.[/red]")
+    if not url or "xbat" not in url.lower():
+        console.print("[red]Invalid URL. Please enter a valid xbat.tv URL.[/red]")
         Prompt.ask("\nPress Enter to continue")
         return
     

@@ -32,7 +32,7 @@ def fetch_manga_info(url: str) -> MangaInfo:
     Fetch manga information from a bato.to manga page.
     
     Args:
-        url: The manga page URL (e.g., https://bato.si/title/81514-solo-leveling-official)
+        url: The manga page URL (e.g., https://xbat.tv/title/81514-solo-leveling-official)
     
     Returns:
         MangaInfo object with extracted data
@@ -62,7 +62,7 @@ def fetch_manga_info(url: str) -> MangaInfo:
     
     # 3. Status (Ongoing / Completed)
     status_match = re.search(
-        r'Bato Upload Status:</span>\s*<span class="font-bold uppercase text-success">([^<]+)</span>',
+        r'xBatCat Upload Status:</span>\s*<span class="font-bold uppercase text-success">([^<]+)</span>',
         html
     )
     status = status_match.group(1).strip() if status_match else None
@@ -116,17 +116,17 @@ def fetch_manga_info(url: str) -> MangaInfo:
     # Pattern 1: /ap1/xfs/attachs/ path
     covers = re.findall(r'<img src="(/ap1/xfs/attachs/[^"]+)"', html)
     if covers:
-        cover_url = f"https://bato.si{covers[0]}"
+        cover_url = f"https://xbat.tv{covers[0]}"
     else:
         # Pattern 2: /media/ampi/ path
         covers = re.findall(r'<img src="(/media/ampi/[^"]+)"', html)
         if covers:
-            cover_url = f"https://bato.si{covers[0]}"
+            cover_url = f"https://xbat.tv{covers[0]}"
         else:
             # Pattern 3: /media/mbim/ path
             covers = re.findall(r'<img src="(/media/mbim/[^"]+)"', html)
             if covers:
-                cover_url = f"https://bato.si{covers[0]}"
+                cover_url = f"https://xbat.tv{covers[0]}"
     logger.debug(f"Extracted cover URL: {cover_url}")
     
     # 7. Views
