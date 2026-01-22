@@ -2,6 +2,7 @@
 Chapter downloading with concurrent image downloads and retry logic.
 """
 
+import html
 import os
 import time
 import re
@@ -193,6 +194,8 @@ class ChapterDownloader:
     @staticmethod
     def _sanitize_filename(name: str) -> str:
         """Remove invalid characters from filename."""
+        # First decode HTML entities (e.g., &#39; -> ')
+        name = html.unescape(name)
         # Remove or replace invalid characters
         sanitized = re.sub(r'[<>:"/\\|?*]', '', name)
         sanitized = sanitized.strip('. ')

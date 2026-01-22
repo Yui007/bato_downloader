@@ -9,7 +9,11 @@ from pathlib import Path
 from typing import Optional, List
 from xml.etree import ElementTree as ET
 
-from PIL import Image
+from PIL import Image, ImageFile
+
+# Allow PIL to load slightly truncated/malformed images
+# This fixes false-positive errors with certain CDN-served images
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 from ..logger import get_logger
 from ..scraper.info import MangaInfo

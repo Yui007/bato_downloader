@@ -1,17 +1,50 @@
-# PyInstaller
-/build/
-/dist/
-
-
 # Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
 .Python
-/venv/
-/env/
-# PyPI build files
-dist/
-build/
+*.egg
 *.egg-info/
+.eggs/
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+
+# PyInstaller
+build/
+dist/
+*.spec.bak
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+logs/
+
+# Config (user-specific)
+config.json
+
+# Downloaded manga (don't commit test downloads)
+*.pdf
+*.cbz
+Chapter*/
+vol_*/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
